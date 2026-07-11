@@ -139,7 +139,10 @@ async def _run_polling():
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     try:
         await bot.delete_webhook(drop_pending_updates=True)
-        await dp.start_polling(bot)
+        # handle_signals=False: bot alohida threadda ishlaydi (asosiy thread
+        # emas), shuning uchun aiogram SIGINT/SIGTERM ushlagichlarini
+        # o'rnatishga urinmasligi kerak (bu faqat asosiy threadda ishlaydi).
+        await dp.start_polling(bot, handle_signals=False)
     finally:
         await bot.session.close()
 
