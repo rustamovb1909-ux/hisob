@@ -22,6 +22,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     WebAppInfo,
+    MenuButtonWebApp,
 )
 
 from app import get_user, upsert_user, init_db
@@ -139,6 +140,20 @@ async def _run_polling():
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     try:
         await bot.delete_webhook(drop_pending_updates=True)
+
+        # Doimiy menyu tugmasi — xabar yozish maydonining oldida, botning
+        # pastki chap burchagida doim ko'rinib turadi. Bosilganda /start
+        # bosmasdan ham to'g'ridan-to'g'ri saytni ochadi. Sayt o'zi
+        # initData va ro'yxatdan o'tganlikni tekshiradi, shuning uchun
+        # ro'yxatdan o'tmagan foydalanuvchi baribir "avval ro'yxatdan
+        # o'ting" ekranini ko'radi.
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="📊 Hisobchi",
+                web_app=WebAppInfo(url=WEBAPP_URL),
+            )
+        )
+
         # handle_signals=False: bot alohida threadda ishlaydi (asosiy thread
         # emas), shuning uchun aiogram SIGINT/SIGTERM ushlagichlarini
         # o'rnatishga urinmasligi kerak (bu faqat asosiy threadda ishlaydi).
