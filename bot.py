@@ -10,7 +10,7 @@ import asyncio
 import logging
 import os
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, Router, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
@@ -32,8 +32,13 @@ logger = logging.getLogger("hisobchi-bot")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "")  # masalan: https://sizning-app.onrender.com
 
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-dp = Dispatcher()
+# MUHIM: Bot/Dispatcher'ni bu yerda global yaratmaymiz. Agar polling biror
+# sababdan uzilib qayta ishga tushsa (yangi asyncio event loop bilan), eski
+# Bot obyektining aiohttp sessiyasi eski (yopilgan) loop'ga bog'langan bo'lib
+# qoladi va "RuntimeError: Event loop is closed" xatosini beradi. Shuning
+# uchun handlerlarni Router'ga ro'yxatdan o'tkazamiz, Bot/Dispatcher esa har
+# safar start_bot() chaqirilganda yangidan yaratiladi.
+router = Router()
 
 
 def contact_keyboard() -> ReplyKeyboardMarkup:
@@ -53,7 +58,7 @@ def webapp_keyboard() -> InlineKeyboardMarkup:
     ]])
 
 
-@dp.message(CommandStart())
+@router.message(CommandStart())
 async def cmd_start(message: Message):
     user = get_user(message.from_user.id)
     if user:
@@ -75,7 +80,7 @@ async def cmd_start(message: Message):
     )
 
 
-@dp.message(F.contact)
+@router.message(F.contact)
 async def on_contact(message: Message):
     contact = message.contact
     # Xavfsizlik: faqat o'zining raqamini qabul qilamiz, boshqa userning
@@ -105,7 +110,7 @@ async def on_contact(message: Message):
     )
 
 
-@dp.message()
+@router.message()
 async def block_unregistered(message: Message):
     """Ro'yxatdan o'tmagan foydalanuvchi boshqa hech narsa yoza olmaydi —
     doim raqam so'raladi. Ro'yxatdan o'tganlar uchun esa webapp tugmasi
@@ -124,8 +129,17 @@ async def block_unregistered(message: Message):
 
 
 async def _run_polling():
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    """Har chaqirilganda TOZA Bot va Dispatcher yaratadi — shu joriy
+    event loop'ga bog'langan aiohttp sessiya bilan. Shu tufayli qayta
+    urinishlarda eski (yopilgan) loop'ga bog'langan sessiya ishlatilmaydi."""
+    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    dp = Dispatcher()
+    dp.include_router(router)
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()
 
 
 def start_bot():
