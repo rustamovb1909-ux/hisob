@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Hisobchi</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #0a0e27;
+            --card: #131837;
+            --text: #e8e9f3;
+            --text2: #8b8fa8;
+            --green: #00d4aa;
+            --red: #ff4757;
+            --blue: #5b6af0;
+            --purple: #a855f7;
+            --orange: #f97316;
+            --border: #1e2348;
+            --input-bg: #0d1130;
+            --radius: 20px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 0 0 130px 0;
+            -webkit-font-smoothing: antialiased;
+            letter-spacing: -0.2px;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        /* ---------- Yuklanish / qulf ekranlari ---------- */
+        .gate-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 32px;
+            z-index: 999;
+            gap: 18px;
+        }
+
+        .gate-screen.hidden { display: none; }
+
+        .gate-spinner {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 3px solid var(--border);
+            border-top-color: var(--blue);
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .gate-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: rgba(91, 106, 240, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .gate-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .gate-text {
+            font-size: 0.85rem;
+            color: var(--text2);
+            max-width: 300px;
+            line-height: 1.5;
+        }
+
+        .gate-btn {
+            margin-top: 6px;
+            padding: 13px 26px;
+            background: var(--blue);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(91, 106, 240, 0.3);
+        }
+
+        .gate-btn:active { transform: scale(0.97); opacity: 0.9; }
+
+        #app-root { display: none; }
+        #app-root.ready { display: block; }
+
+        /* ---------- Sarlavha ---------- */
+        .greeting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            padding: 0 4px;
+        }
+
+        .greeting-text {
+            font-size: 0.85rem;
+            color: var(--text2);
+            font-weight: 500;
+        }
+
+        .greeting-name {
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .phone-badge {
+            font-size: 0.68rem;
+            color: var(--text2);
+            background: rgba(255,255,255,0.05);
+            padding: 4px 9px;
+            border-radius: 8px;
+        }
+
+        /* Balans kartasi */
+        .balance-card {
+            background: linear-gradient(145deg, #1a1f4e, #0f1335);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 28px 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .balance-card::before {
+            content: '';
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(91, 106, 240, 0.08);
+        }
+
+        .balance-card::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: -30px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: rgba(0, 212, 170, 0.06);
+        }
+
+        .balance-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            color: var(--text2);
+            margin-bottom: 6px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .balance-row {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .balance-value {
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: #ffffff;
+        }
+
+        .balance-currency {
+            font-size: 0.9rem;
+            color: var(--text2);
+            font-weight: 500;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-box {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            padding: 12px;
+        }
+
+        .stat-title {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text2);
+            margin-bottom: 4px;
+        }
+
+        .stat-amount {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .stat-amount.green { color: var(--green); }
+        .stat-amount.red { color: var(--red); }
+
+        /* Sarlavhalar */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 0 4px;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .section-badge {
+            font-size: 0.7rem;
+            color: var(--text2);
+            background: rgba(255,255,255,0.05);
+            padding: 4px 10px;
+            border-radius: 10px;
+        }
+
+        /* Kartalar */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        /* Xarajatlar ko'rinishi */
+        .expense-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .expense-bar-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .expense-bar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .expense-bar-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e2e2f0;
+        }
+
+        .expense-bar-amount {
+            font-size: 0.8rem;
+            color: var(--text2);
+            font-weight: 500;
+        }
+
+        .expense-bar-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .expense-bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s ease;
+        }
+
+        .total-expense-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            margin-top: 4px;
+        }
+
+        .total-expense-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .total-expense-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--red);
+        }
+
+        /* Form */
+        .form-type-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .form-type-badge.income-badge {
+            background: rgba(0, 212, 170, 0.15);
+            color: var(--green);
+        }
+
+        .form-type-badge.expense-badge {
+            background: rgba(255, 71, 87, 0.15);
+            color: var(--red);
+        }
+
+        .field-group {
+            margin-bottom: 14px;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text2);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .field-input {
+            width: 100%;
+            padding: 13px 14px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .field-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(91, 106, 240, 0.1);
+        }
+
+        .field-input::placeholder {
+            color: #3a3f66;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+            margin-top: 4px;
+        }
+
+        .submit-btn.income-submit {
+            background: var(--green);
+            box-shadow: 0 8px 20px rgba(0, 212, 170, 0.25);
+        }
+
+        .submit-btn.expense-submit {
+            background: var(--red);
+            box-shadow: 0 8px 20px rgba(255, 71, 87, 0.25);
+        }
+
+        .submit-btn:active {
+            transform: scale(0.97);
+            opacity: 0.9;
+        }
+
+        /* Tranzaksiyalar */
+        .tx-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tx-item:last-child {
+            border-bottom: none;
+        }
+
+        .tx-icon-box {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            font-weight: 700;
+        }
+
+        .tx-icon-box.income-box {
+            background: rgba(0, 212, 170, 0.12);
+            color: var(--green);
+        }
+
+        .tx-icon-box.expense-box {
+            background: rgba(255, 71, 87, 0.12);
+            color: var(--red);
+        }
+
+        .tx-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .tx-desc {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #ffffff;
+            margin-bottom: 1px;
+        }
+
+        .tx-date {
+            font-size: 0.7rem;
+            color: var(--text2);
+        }
+
+        .tx-note-small {
+            font-size: 0.7rem;
+            color: #5a5f7a;
+            font-style: italic;
+        }
+
+        .tx-sum {
+            font-weight: 700;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            letter-spacing: -0.3px;
+        }
+
+        .tx-sum.green { color: var(--green); }
+        .tx-sum.red { color: var(--red); }
+
+        .tx-delete {
+            background: none;
+            border: none;
+            color: #3a3f66;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            opacity: 0;
+        }
+
+        .tx-item:active .tx-delete {
+            opacity: 1;
+        }
+
+        .tx-delete:active {
+            background: rgba(255, 71, 87, 0.15);
+            color: var(--red);
+        }
+
+        /* Pastki navigatsiya */
+        .bottom-nav {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            display: flex;
+            padding: 3px;
+            z-index: 100;
+            box-shadow: var(--shadow);
+            width: calc(100% - 32px);
+            max-width: 380px;
+        }
+
+        .nav-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text2);
+            padding: 10px 6px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .nav-btn.active {
+            background: rgba(91, 106, 240, 0.15);
+            color: #ffffff;
+        }
+
+        .nav-symbol {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .nav-btn.add-income-btn {
+            background: rgba(0, 212, 170, 0.18);
+            color: var(--green);
+            margin: -6px 3px;
+            padding: 14px 6px;
+            border-radius: 18px;
+        }
+
+        .nav-btn.add-expense-btn {
+            background: rgba(255, 71, 87, 0.18);
+            color: var(--red);
+            margin: -6px 3px;
+            padding: 14px 6px;
+            border-radius: 18px;
+        }
+
+        .nav-btn.add-income-btn .nav-symbol,
+        .nav-btn.add-expense-btn .nav-symbol {
+            font-size: 1.6rem;
+        }
+
+        /* Sahifalar */
+        .view {
+            display: none;
+            animation: fadeUp 0.25s ease;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Bo'sh holat */
+        .empty-box {
+            text-align: center;
+            padding: 30px 16px;
+            color: var(--text2);
+        }
+
+        .empty-text {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Bildirish */
+        .toast {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--card);
+            color: #ffffff;
+            padding: 10px 22px;
+            border-radius: 28px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            z-index: 200;
+            transition: all 0.3s;
+            opacity: 0;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Yuklanish ekrani -->
+    <div class="gate-screen" id="gateLoading">
+        <div class="gate-spinner"></div>
+        <div class="gate-text">tekshirilmoqda...</div>
+    </div>
+
+    <!-- Telegram tashqarisida ochilgan holat -->
+    <div class="gate-screen hidden" id="gateNoTelegram">
+        <div class="gate-icon">🔒</div>
+        <div class="gate-title">Faqat Telegram orqali</div>
+        <div class="gate-text">Bu ilova faqat Hisobchi Telegram boti ichidan ochiladi.</div>
+        <button class="gate-btn" id="openBotFromNoTg">Botga o'tish</button>
+    </div>
+
+    <!-- Ro'yxatdan o'tmagan holat -->
+    <div class="gate-screen hidden" id="gateNotRegistered">
+        <div class="gate-icon">📱</div>
+        <div class="gate-title">Avval ro'yxatdan o'ting</div>
+        <div class="gate-text">Hisobchidan foydalanish uchun botda telefon raqamingizni tasdiqlashingiz kerak.</div>
+        <button class="gate-btn" id="openBotFromNotReg">Botga o'tish</button>
+    </div>
+
+    <!-- Ulanish xatosi -->
+    <div class="gate-screen hidden" id="gateError">
+        <div class="gate-icon">⚠️</div>
+        <div class="gate-title">Xatolik yuz berdi</div>
+        <div class="gate-text" id="gateErrorText">Serverga ulanib bo'lmadi. Qayta urinib ko'ring.</div>
+        <button class="gate-btn" id="retryBtn">Qayta urinish</button>
+    </div>
+
+    <!-- Asosiy ilova -->
+    <div id="app-root">
+    <div class="container">
+
+        <div class="greeting-row">
+            <div class="greeting-text">Salom, <span class="greeting-name" id="userName">foydalanuvchi</span></div>
+            <div class="phone-badge" id="userPhone"></div>
+        </div>
+
+        <!-- Balans sarlavhasi -->
+        <div class="balance-card">
+            <div class="balance-label">joriy balans</div>
+            <div class="balance-row">
+                <span class="balance-value" id="balanceVal">0</span>
+                <span class="balance-currency">so'm</span>
+            </div>
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-title">+ shu oy kirim</div>
+                    <div class="stat-amount green" id="monthIncome">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">− shu oy xarajat</div>
+                    <div class="stat-amount red" id="monthExpense">0</div>
+                </div>
+            </div>
+        </div>
+
+        <main>
+            <!-- Asosiy sahifa -->
+            <section class="view active" id="view-dashboard">
+                <div class="section-header">
+                    <h2 class="section-title">xarajatlar taqsimoti</h2>
+                    <span class="section-badge" id="totalExpenseBadge">0 so'm</span>
+                </div>
+                <div class="card" id="expenseBreakdownCard">
+                    <div class="empty-box">
+                        <div class="empty-text">hali xarajat kiritilmagan</div>
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin-top: 4px;">
+                    <h2 class="section-title">so'nggi yozuvlar</h2>
+                </div>
+                <div class="card" id="recentCard">
+                    <div class="empty-box">
+                        <div class="empty-text">hali hech narsa yozilmadi</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Kirim qo'shish sahifasi -->
+            <section class="view" id="view-add-income">
+                <div class="section-header">
+                    <h2 class="section-title">+ kirim qo'shish</h2>
+                </div>
+                <div class="card">
+                    <span class="form-type-badge income-badge">+ KIRIM</span>
+
+                    <div class="field-group">
+                        <label class="field-label">summa (so'm)</label>
+                        <input type="number" class="field-input" id="incomeAmount" placeholder="50000" inputmode="numeric">
+                    </div>
+
+                    <button class="submit-btn income-submit" id="incomeSubmitBtn">+ kirimni saqlash</button>
+                </div>
+            </section>
+
+            <!-- Xarajat qo'shish sahifasi -->
+            <section class="view" id="view-add-expense">
+                <div class="section-header">
+                    <h2 class="section-title">− xarajat qo'shish</h2>
+                </div>
+                <div class="card">
+                    <span class="form-type-badge expense-badge">− XARAJAT</span>
+
+                    <div class="field-group">
+                        <label class="field-label">summa (so'm)</label>
+                        <input type="number" class="field-input" id="expenseAmount" placeholder="50000" inputmode="numeric">
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label">nimaga sarflandi</label>
+                        <input type="text" class="field-input" id="expenseCategory" placeholder="masalan: bozor, yo'lkira, kiyim..." maxlength="100">
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label">izoh (ixtiyoriy)</label>
+                        <input type="text" class="field-input" id="expenseNote" placeholder="qo'shimcha izoh..." maxlength="200">
+                    </div>
+
+                    <button class="submit-btn expense-submit" id="expenseSubmitBtn">− xarajatni saqlash</button>
+                </div>
+            </section>
+
+            <!-- Tarix sahifasi -->
+            <section class="view" id="view-history">
+                <div class="section-header">
+                    <h2 class="section-title">barcha yozuvlar</h2>
+                    <span class="section-badge" id="totalCount">0 ta</span>
+                </div>
+                <div class="card" id="historyCard">
+                    <div class="empty-box">
+                        <div class="empty-text">hali hech narsa yozilmadi</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <nav class="bottom-nav">
+        <button class="nav-btn active" data-view="dashboard">
+            <span class="nav-symbol">≡</span>
+            asosiy
+        </button>
+        <button class="nav-btn add-income-btn" data-view="add-income">
+            <span class="nav-symbol">+</span>
+            kirim
+        </button>
+        <button class="nav-btn add-expense-btn" data-view="add-expense">
+            <span class="nav-symbol">−</span>
+            xarajat
+        </button>
+        <button class="nav-btn" data-view="history">
+            <span class="nav-symbol">☰</span>
+            tarix
+        </button>
+    </nav>
+    </div><!-- /app-root -->
+
+    <script>
+        const BOT_USERNAME = {{ bot_username | tojson }};
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            tg.setHeaderColor('#0a0e27');
+            tg.setBackgroundColor('#0a0e27');
+        }
+
+        let transactions = [];
+
+        const $ = (s) => document.querySelector(s);
+        const $$ = (s) => document.querySelectorAll(s);
+
+        function fmt(n) {
+            return Math.round(n).toLocaleString('uz-UZ').replace(/,/g, ' ');
+        }
+
+        function showToast(msg) {
+            const t = $('#toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2000);
+        }
+
+        function initData() {
+            return tg?.initData || '';
+        }
+
+        function openBot() {
+            const link = 'https://t.me/' + BOT_USERNAME;
+            if (tg?.openTelegramLink) {
+                tg.openTelegramLink(link);
+            } else {
+                window.open(link, '_blank');
+            }
+        }
+
+        $('#openBotFromNoTg').addEventListener('click', openBot);
+        $('#openBotFromNotReg').addEventListener('click', openBot);
+        $('#retryBtn').addEventListener('click', () => checkAccess());
+
+        function showGate(id) {
+            ['gateLoading', 'gateNoTelegram', 'gateNotRegistered', 'gateError'].forEach(g => {
+                $('#' + g).classList.toggle('hidden', g !== id);
+            });
+            $('#app-root').classList.remove('ready');
+        }
+
+        async function api(path, options = {}) {
+            const headers = { 'Content-Type': 'application/json', ...options.headers };
+            headers['X-Telegram-Init-Data'] = initData();
+            const res = await fetch(path, { ...options, headers });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const e = new Error(err.error || res.statusText);
+                e.status = res.status;
+                throw e;
+            }
+            return res.json();
+        }
+
+        async function checkAccess() {
+            showGate('gateLoading');
+
+            if (!tg || !initData()) {
+                showGate('gateNoTelegram');
+                return;
+            }
+
+            try {
+                const me = await api('/api/me');
+                if (!me.registered) {
+                    showGate('gateNotRegistered');
+                    return;
+                }
+
+                $('#userName').textContent = me.first_name || tg.initDataUnsafe?.user?.first_name || 'foydalanuvchi';
+                if (me.phone) {
+                    const p = me.phone.toString();
+                    $('#userPhone').textContent = '•••' + p.slice(-4);
+                }
+
+                document.querySelectorAll('.gate-screen').forEach(g => g.classList.add('hidden'));
+                $('#app-root').classList.add('ready');
+
+                await loadTransactions();
+            } catch (e) {
+                $('#gateErrorText').textContent = e.message || "Serverga ulanib bo'lmadi";
+                showGate('gateError');
+            }
+        }
+
+        // Navigatsiya
+        $$('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const viewName = btn.dataset.view;
+                if (!viewName) return;
+
+                $$('.nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                $$('.view').forEach(v => v.classList.remove('active'));
+                $(`#view-${viewName}`).classList.add('active');
+
+                if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            });
+        });
+
+        // Kirim saqlash
+        $('#incomeSubmitBtn').addEventListener('click', async () => {
+            const amount = parseFloat($('#incomeAmount').value);
+
+            if (!amount || amount <= 0) {
+                showToast('summani kiriting');
+                return;
+            }
+
+            try {
+                await api('/api/transactions', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        type: 'income',
+                        amount,
+                        category: 'kirim',
+                        note: ''
+                    })
+                });
+
+                $('#incomeAmount').value = '';
+
+                showToast('kirim qo\'shildi');
+                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+                await loadTransactions();
+            } catch (e) {
+                showToast('xatolik: ' + e.message);
+            }
+        });
+
+        // Xarajat saqlash
+        $('#expenseSubmitBtn').addEventListener('click', async () => {
+            const amount = parseFloat($('#expenseAmount').value);
+            const category = $('#expenseCategory').value.trim();
+            const note = $('#expenseNote').value.trim();
+
+            if (!amount || amount <= 0) {
+                showToast('summani kiriting');
+                return;
+            }
+            if (!category) {
+                showToast('nimaga sarflanganini yozing');
+                return;
+            }
+
+            try {
+                await api('/api/transactions', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        type: 'expense',
+                        amount,
+                        category,
+                        note
+                    })
+                });
+
+                $('#expenseAmount').value = '';
+                $('#expenseCategory').value = '';
+                $('#expenseNote').value = '';
+
+                showToast('xarajat qo\'shildi');
+                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+                await loadTransactions();
+            } catch (e) {
+                showToast('xatolik: ' + e.message);
+            }
+        });
+
+        // Tranzaksiyalarni yuklash
+        async function loadTransactions() {
+            try {
+                transactions = await api('/api/transactions');
+            } catch (e) {
+                transactions = [];
+            }
+            renderDashboard();
+            renderHistory();
+        }
+
+        function isThisMonth(iso) {
+            const d = new Date(iso);
+            const now = new Date();
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        }
+
+        // Ranglar palitrasi
+        const barColors = [
+            '#ff4757', '#ff6b81', '#ff6348', '#e84118',
+            '#c0392b', '#cf6679', '#b71540', '#eb3b5a'
+        ];
+
+        function renderDashboard() {
+            let totalIncome = 0,
+                totalExpense = 0,
+                monthIncome = 0,
+                monthExpense = 0;
+            const catTotals = {};
+
+            transactions.forEach(t => {
+                if (t.type === 'income') {
+                    totalIncome += t.amount;
+                    if (isThisMonth(t.created_at)) monthIncome += t.amount;
+                } else {
+                    totalExpense += t.amount;
+                    if (isThisMonth(t.created_at)) {
+                        monthExpense += t.amount;
+                        catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
+                    }
+                }
+            });
+
+            $('#balanceVal').textContent = fmt(totalIncome - totalExpense);
+            $('#monthIncome').textContent = fmt(monthIncome);
+            $('#monthExpense').textContent = fmt(monthExpense);
+            $('#totalExpenseBadge').textContent = fmt(monthExpense) + " so'm";
+
+            // Xarajatlar taqsimoti
+            const breakdownCard = $('#expenseBreakdownCard');
+            const entries = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+            const total = entries.reduce((s, [, v]) => s + v, 0);
+
+            if (total === 0) {
+                breakdownCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali xarajat kiritilmagan</div></div>';
+            } else {
+                let html = '<div class="expense-summary">';
+
+                entries.forEach(([cat, val], i) => {
+                    const pct = Math.round(val / total * 100);
+                    const color = barColors[i % barColors.length];
+                    html += `
+                        <div class="expense-bar-item">
+                            <div class="expense-bar-header">
+                                <span class="expense-bar-name">${cat}</span>
+                                <span class="expense-bar-amount">${fmt(val)} so'm · ${pct}%</span>
+                            </div>
+                            <div class="expense-bar-track">
+                                <div class="expense-bar-fill" style="width: 0%; background: ${color};" data-width="${pct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        <div class="total-expense-row">
+                            <span class="total-expense-label">jami xarajat</span>
+                            <span class="total-expense-value">−${fmt(total)} so'm</span>
+                        </div>
+                    </div>
+                `;
+
+                breakdownCard.innerHTML = html;
+
+                // Animatsiya
+                setTimeout(() => {
+                    breakdownCard.querySelectorAll('.expense-bar-fill').forEach(bar => {
+                        bar.style.width = bar.dataset.width;
+                    });
+                }, 50);
+            }
+
+            // So'nggi yozuvlar
+            const recentCard = $('#recentCard');
+            if (transactions.length === 0) {
+                recentCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali hech narsa yozilmadi</div></div>';
+            } else {
+                recentCard.innerHTML = transactions.slice(0, 6).map(t => createTxHTML(t, false)).join('');
+            }
+        }
+
+        function createTxHTML(t, showDelete) {
+            const date = new Date(t.created_at);
+            const dateStr = date.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
+            const sign = t.type === 'income' ? '+' : '−';
+            const cls = t.type === 'income' ? 'green' : 'red';
+            const boxCls = t.type === 'income' ? 'income-box' : 'expense-box';
+            const icon = t.type === 'income' ? '+' : '−';
+            const desc = t.type === 'income' ? 'Kirim' : t.category;
+
+            return `
+                <div class="tx-item">
+                    <div class="tx-icon-box ${boxCls}">${icon}</div>
+                    <div class="tx-info">
+                        <div class="tx-desc">${desc}</div>
+                        <div class="tx-date">${dateStr}${t.note ? '<span class="tx-note-small"> · ' + t.note + '</span>' : ''}</div>
+                    </div>
+                    <div class="tx-sum ${cls}">${sign}${fmt(t.amount)}</div>
+                    ${showDelete ? `<button class="tx-delete" data-id="${t.id}">×</button>` : ''}
+                </div>
+            `;
+        }
+
+        function renderHistory() {
+            const historyCard = $('#historyCard');
+            $('#totalCount').textContent = transactions.length + ' ta';
+
+            if (transactions.length === 0) {
+                historyCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali hech narsa yozilmadi</div></div>';
+            } else {
+                historyCard.innerHTML = transactions.map(t => createTxHTML(t, true)).join('');
+
+                historyCard.querySelectorAll('.tx-delete').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (confirm('ushbu yozuvni o\'chirishni xohlaysizmi?')) {
+                            try {
+                                await api('/api/transactions/' + btn.dataset.id, { method: 'DELETE' });
+                                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+                                showToast('yozuv o\'chirildi');
+                                await loadTransactions();
+                            } catch (e) {
+                                showToast('o\'chirib bo\'lmadi');
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
+        // Boshlash
+        checkAccess();
+    </script>
+</body>
+</html>
