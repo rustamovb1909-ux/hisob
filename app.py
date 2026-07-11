@@ -200,6 +200,14 @@ def require_registered():
 # ---------------------------------------------------------------------------
 # Sahifalar
 # ---------------------------------------------------------------------------
+def to_utc_iso(dt):
+    """PostgreSQL NOW() qiymati UTC bo'yicha saqlanadi, lekin "timezone
+    yo'q" (naive) holatda qaytadi. Bu funksiya ISO satr oxiriga aniq "Z"
+    (UTC) belgisini qo'shadi — shunda brauzer sanani noto'g'ri (o'zining
+    mahalliy vaqti deb) talqin qilib, kunni siljitib yubormaydi."""
+    return dt.isoformat() + "Z"
+
+
 @app.route("/")
 def index():
     return render_template("index.html", bot_username=BOT_USERNAME)
@@ -235,7 +243,7 @@ def api_list_transactions():
         "amount": float(r["amount"]),
         "category": r["category"],
         "note": r["note"],
-        "created_at": r["created_at"].isoformat(),
+        "created_at": to_utc_iso(r["created_at"]),
     } for r in rows]
     return jsonify(result)
 
@@ -270,7 +278,7 @@ def api_add_transaction():
         "amount": float(row["amount"]),
         "category": row["category"],
         "note": row["note"],
-        "created_at": row["created_at"].isoformat(),
+        "created_at": to_utc_iso(row["created_at"]),
     }), 201
 
 
