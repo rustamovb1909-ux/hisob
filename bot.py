@@ -32,13 +32,16 @@ logger = logging.getLogger("hisobchi-bot")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "")  # masalan: https://sizning-app.onrender.com
 
-# MUHIM: Bot/Dispatcher'ni bu yerda global yaratmaymiz. Agar polling biror
-# sababdan uzilib qayta ishga tushsa (yangi asyncio event loop bilan), eski
-# Bot obyektining aiohttp sessiyasi eski (yopilgan) loop'ga bog'langan bo'lib
-# qoladi va "RuntimeError: Event loop is closed" xatosini beradi. Shuning
-# uchun handlerlarni Router'ga ro'yxatdan o'tkazamiz, Bot/Dispatcher esa har
-# safar start_bot() chaqirilganda yangidan yaratiladi.
+# MUHIM: faqat Bot obyekti har safar start_bot() chaqirilganda yangidan
+# yaratiladi (chunki aiohttp sessiya aynan Bot ichida, joriy event loop'ga
+# bog'langan holda saqlanadi — eski/yopilgan loop bilan qayta ishlatilsa
+# "RuntimeError: Event loop is closed" beradi).
+# Dispatcher va Router esa faqat BIR MARTA yaratiladi — chunki Router faqat
+# bitta Dispatcher'ga bog'lanishi mumkin, qayta include_router() qilinsa
+# "Router is already attached" xatosini beradi.
 router = Router()
+dp = Dispatcher()
+dp.include_router(router)
 
 
 def contact_keyboard() -> ReplyKeyboardMarkup:
@@ -129,12 +132,11 @@ async def block_unregistered(message: Message):
 
 
 async def _run_polling():
-    """Har chaqirilganda TOZA Bot va Dispatcher yaratadi — shu joriy
-    event loop'ga bog'langan aiohttp sessiya bilan. Shu tufayli qayta
-    urinishlarda eski (yopilgan) loop'ga bog'langan sessiya ishlatilmaydi."""
+    """Har chaqirilganda TOZA Bot obyekti yaratadi — joriy event loop'ga
+    bog'langan aiohttp sessiya bilan. Dispatcher/Router global (bir marta
+    yaratilgan) qoladi. Shu tufayli qayta urinishlarda eski (yopilgan)
+    loop'ga bog'langan sessiya ishlatilmaydi."""
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    dp = Dispatcher()
-    dp.include_router(router)
     try:
         await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot)
