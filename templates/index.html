@@ -492,25 +492,122 @@
         .tx-sum.green { color: var(--green); }
         .tx-sum.red { color: var(--red); }
 
-        .tx-delete {
+        .tx-actions {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .tx-icon-btn {
             background: none;
             border: none;
-            color: #3a3f66;
-            font-size: 1.2rem;
+            color: #5a5f7a;
+            font-size: 0.95rem;
             cursor: pointer;
-            padding: 6px;
+            padding: 7px;
             border-radius: 8px;
-            transition: all 0.2s;
-            opacity: 0;
+            transition: all 0.15s;
+            line-height: 1;
         }
 
-        .tx-item:active .tx-delete {
-            opacity: 1;
+        .tx-icon-btn.edit-btn:active {
+            background: rgba(91, 106, 240, 0.15);
+            color: var(--blue);
         }
 
-        .tx-delete:active {
+        .tx-icon-btn.delete-btn:active {
             background: rgba(255, 71, 87, 0.15);
             color: var(--red);
+        }
+
+        /* Kunlik kirim guruhi — bosilganda ochiladi/yopiladi */
+        .daily-income-header {
+            cursor: pointer;
+        }
+
+        .daily-income-chevron {
+            font-size: 0.7rem;
+            color: var(--text2);
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        .daily-income-header.expanded .daily-income-chevron {
+            transform: rotate(180deg);
+        }
+
+        .daily-income-details {
+            padding-left: 12px;
+            border-left: 2px solid var(--border);
+            margin: 0 0 6px 19px;
+        }
+
+        .daily-income-details .tx-item {
+            padding: 9px 0;
+        }
+
+        /* Tahrirlash modali */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-sheet {
+            width: 100%;
+            max-width: 420px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px 24px 0 0;
+            padding: 22px 18px 28px;
+            transform: translateY(20px);
+            transition: transform 0.2s;
+        }
+
+        .modal-overlay.show .modal-sheet {
+            transform: translateY(0);
+        }
+
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 16px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .modal-actions .submit-btn {
+            margin-top: 0;
+        }
+
+        .modal-cancel-btn {
+            flex: 1;
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: transparent;
+            color: var(--text2);
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
         }
 
         /* Pastki navigatsiya */
@@ -832,16 +929,7 @@
             <!-- Tarix sahifasi -->
             <section class="view" id="view-history">
                 <div class="section-header">
-                    <h2 class="section-title">kunlik kirimlar</h2>
-                </div>
-                <div class="card" id="dailyIncomeHistoryCard">
-                    <div class="empty-box">
-                        <div class="empty-text">hali kirim kiritilmagan</div>
-                    </div>
-                </div>
-
-                <div class="section-header" style="margin-top: 4px;">
-                    <h2 class="section-title">xarajatlar tarixi</h2>
+                    <h2 class="section-title">tarix</h2>
                     <span class="section-badge" id="totalCount">0 ta</span>
                 </div>
                 <div class="card" id="historyCard">
@@ -854,6 +942,36 @@
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <!-- Tahrirlash modali -->
+    <div class="modal-overlay" id="editModalOverlay">
+        <div class="modal-sheet">
+            <div class="modal-title" id="editModalTitle">Tahrirlash</div>
+
+            <div class="field-group">
+                <label class="field-label">summa (so'm)</label>
+                <input type="number" class="field-input" id="editAmount" inputmode="numeric">
+            </div>
+
+            <div class="field-group" id="editCategoryGroup">
+                <label class="field-label">nimaga sarflandi</label>
+                <input type="text" class="field-input" id="editCategory" maxlength="100">
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">izoh (ixtiyoriy)</label>
+                <input type="text" class="field-input" id="editNote" maxlength="200">
+            </div>
+
+            <div class="modal-actions">
+                <button class="submit-btn" id="editSaveBtn" style="background: var(--blue); box-shadow: 0 8px 20px rgba(91, 106, 240, 0.25);">saqlash</button>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-cancel-btn" id="editCancelBtn">bekor qilish</button>
+                <button class="modal-cancel-btn" id="editDeleteBtn" style="color: var(--red); border-color: rgba(255,71,87,0.3);">o'chirish</button>
+            </div>
+        </div>
+    </div>
 
     <nav class="bottom-nav">
         <button class="nav-btn active" data-view="dashboard">
@@ -1145,16 +1263,71 @@
                 const d = new Date(t.created_at);
                 const key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
                 if (!groups[key]) {
-                    groups[key] = { total: 0, count: 0, latest: t.created_at, dateObj: d };
+                    groups[key] = { key, total: 0, count: 0, latest: t.created_at, dateObj: d, items: [] };
                 }
                 groups[key].total += t.amount;
                 groups[key].count += 1;
+                groups[key].items.push(t);
                 if (new Date(t.created_at) > new Date(groups[key].latest)) {
                     groups[key].latest = t.created_at;
                     groups[key].dateObj = d;
                 }
             });
             return Object.values(groups).sort((a, b) => new Date(b.latest) - new Date(a.latest));
+        }
+
+        function escapeAttr(s) {
+            return (s || '').toString()
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        // Bitta "kunlik kirim" qatorini (bosilganda ichidagi har bir kirim
+        // ochiladigan/yopiladigan qilib) HTML qilib chiqaradi. `prefix` — bir
+        // xil kun ikkita joyda (asosiy va tarix) chiqsa, id'lar to'qnashmasligi
+        // uchun kerak.
+        function renderDailyIncomeGroupHTML(g, prefix) {
+            const dateStr = g.dateObj.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
+            const uniqueKey = prefix + '-' + g.key;
+
+            const itemsHTML = g.items
+                .slice()
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                .map(t => {
+                    const timeStr = new Date(t.created_at).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+                    return `
+                        <div class="tx-item">
+                            <div class="tx-icon-box income-box">+</div>
+                            <div class="tx-info">
+                                <div class="tx-desc">Kirim</div>
+                                <div class="tx-date">${timeStr}${t.note ? '<span class="tx-note-small"> · ' + t.note + '</span>' : ''}</div>
+                            </div>
+                            <div class="tx-sum green">+${fmt(t.amount)}</div>
+                            <div class="tx-actions">
+                                <button class="tx-icon-btn edit-btn" data-id="${t.id}" data-type="income" data-amount="${t.amount}" data-category="" data-note="${escapeAttr(t.note)}">✏️</button>
+                                <button class="tx-icon-btn delete-btn" data-id="${t.id}">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            return `
+                <div class="daily-income-header tx-item" data-key="${uniqueKey}">
+                    <div class="tx-icon-box income-box">+</div>
+                    <div class="tx-info">
+                        <div class="tx-desc">Kunlik kirim</div>
+                        <div class="tx-date">${dateStr}${g.count > 1 ? ' · ' + g.count + ' ta kirim' : ''}</div>
+                    </div>
+                    <div class="tx-sum green">+${fmt(g.total)}</div>
+                    <span class="daily-income-chevron">▾</span>
+                </div>
+                <div class="daily-income-details" id="daily-details-${uniqueKey}" style="display:none;">
+                    ${itemsHTML}
+                </div>
+            `;
         }
 
         function renderDailyIncomeCard(elementId, limit) {
@@ -1167,19 +1340,7 @@
                 return;
             }
 
-            el.innerHTML = groups.map(g => {
-                const dateStr = g.dateObj.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
-                return `
-                    <div class="tx-item">
-                        <div class="tx-icon-box income-box">+</div>
-                        <div class="tx-info">
-                            <div class="tx-desc">Kunlik kirim</div>
-                            <div class="tx-date">${dateStr}${g.count > 1 ? ' · ' + g.count + ' ta kirim' : ''}</div>
-                        </div>
-                        <div class="tx-sum green">+${fmt(g.total)}</div>
-                    </div>
-                `;
-            }).join('');
+            el.innerHTML = groups.map(g => renderDailyIncomeGroupHTML(g, elementId)).join('');
         }
 
         // Ranglar palitrasi
@@ -1270,7 +1431,7 @@
             }
         }
 
-        function createTxHTML(t, showDelete) {
+        function createTxHTML(t, showActions) {
             const date = new Date(t.created_at);
             const dateStr = date.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
             const sign = t.type === 'income' ? '+' : '−';
@@ -1278,6 +1439,13 @@
             const boxCls = t.type === 'income' ? 'income-box' : 'expense-box';
             const icon = t.type === 'income' ? '+' : '−';
             const desc = t.type === 'income' ? 'Kirim' : t.category;
+
+            const actionsHTML = showActions ? `
+                <div class="tx-actions">
+                    <button class="tx-icon-btn edit-btn" data-id="${t.id}" data-type="${t.type}" data-amount="${t.amount}" data-category="${escapeAttr(t.category)}" data-note="${escapeAttr(t.note)}">✏️</button>
+                    <button class="tx-icon-btn delete-btn" data-id="${t.id}">🗑️</button>
+                </div>
+            ` : '';
 
             return `
                 <div class="tx-item">
@@ -1287,40 +1455,201 @@
                         <div class="tx-date">${dateStr}${t.note ? '<span class="tx-note-small"> · ' + t.note + '</span>' : ''}</div>
                     </div>
                     <div class="tx-sum ${cls}">${sign}${fmt(t.amount)}</div>
-                    ${showDelete ? `<button class="tx-delete" data-id="${t.id}">×</button>` : ''}
+                    ${actionsHTML}
                 </div>
             `;
         }
 
         function renderHistory() {
-            renderDailyIncomeCard('dailyIncomeHistoryCard', null);
-
             const historyCard = $('#historyCard');
-            const expenses = transactions.filter(t => t.type === 'expense');
-            $('#totalCount').textContent = expenses.length + ' ta';
 
-            if (expenses.length === 0) {
-                historyCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali xarajat yozilmadi</div></div>';
-            } else {
-                historyCard.innerHTML = expenses.map(t => createTxHTML(t, true)).join('');
+            if (transactions.length === 0) {
+                historyCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali hech narsa yozilmadi</div></div>';
+                $('#totalCount').textContent = '0 ta';
+                return;
+            }
 
-                historyCard.querySelectorAll('.tx-delete').forEach(btn => {
-                    btn.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-                        if (confirm('ushbu yozuvni o\'chirishni xohlaysizmi?')) {
-                            try {
-                                await api('/api/transactions/' + btn.dataset.id, { method: 'DELETE' });
-                                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
-                                showToast('yozuv o\'chirildi');
-                                await loadTransactions();
-                            } catch (e) {
-                                showToast('o\'chirib bo\'lmadi');
-                            }
-                        }
-                    });
+            const incomeGroups = groupIncomeByDay(transactions);
+            const expenseItems = transactions.filter(t => t.type === 'expense');
+
+            const monthMap = {};
+            function ensureMonth(d) {
+                const key = d.getFullYear() + '-' + d.getMonth();
+                if (!monthMap[key]) {
+                    monthMap[key] = {
+                        year: d.getFullYear(), month: d.getMonth(),
+                        income: 0, expense: 0, items: [],
+                        sortKey: d.getFullYear() * 12 + d.getMonth(),
+                    };
+                }
+                return monthMap[key];
+            }
+
+            incomeGroups.forEach(g => {
+                const m = ensureMonth(g.dateObj);
+                m.income += g.total;
+                m.items.push({ kind: 'income-day', sortDate: new Date(g.latest), data: g });
+            });
+
+            expenseItems.forEach(t => {
+                const d = new Date(t.created_at);
+                const m = ensureMonth(d);
+                m.expense += t.amount;
+                m.items.push({ kind: 'expense', sortDate: d, data: t });
+            });
+
+            const months = Object.values(monthMap).sort((a, b) => b.sortKey - a.sortKey);
+            months.forEach(m => m.items.sort((a, b) => b.sortDate - a.sortDate));
+
+            let totalCount = 0;
+            let html = '';
+
+            months.forEach(m => {
+                const balance = m.income - m.expense;
+                const balCls = balance >= 0 ? 'green' : 'red';
+                const monthLabel = UZ_MONTHS[m.month] + ' ' + m.year;
+
+                html += `
+                    <div class="month-item">
+                        <div class="month-header">
+                            <span class="month-name">${monthLabel}</span>
+                            <span class="month-balance ${balCls}">${balance >= 0 ? '+' : '−'}${fmt(Math.abs(balance))} so'm</span>
+                        </div>
+                        <div class="month-stats">
+                            <span class="month-stat green">+${fmt(m.income)} kirim</span>
+                            <span class="month-stat red">−${fmt(m.expense)} xarajat</span>
+                        </div>
+                    </div>
+                `;
+
+                m.items.forEach(item => {
+                    totalCount++;
+                    if (item.kind === 'income-day') {
+                        html += renderDailyIncomeGroupHTML(item.data, 'hist');
+                    } else {
+                        html += createTxHTML(item.data, true);
+                    }
                 });
+            });
+
+            historyCard.innerHTML = html;
+            $('#totalCount').textContent = totalCount + ' ta';
+        }
+
+        // Kunlik kirim qatorini ochish/yopish va tahrirlash/o'chirish
+        // tugmalarini bosishni bitta joyda ushlaymiz (dinamik chiqadigan
+        // barcha elementlar uchun ishlaydi).
+        $('#app-root').addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.tx-icon-btn.edit-btn');
+            if (editBtn) {
+                e.stopPropagation();
+                openEditModal(editBtn.dataset);
+                return;
+            }
+
+            const delBtn = e.target.closest('.tx-icon-btn.delete-btn');
+            if (delBtn) {
+                e.stopPropagation();
+                deleteTransactionConfirm(delBtn.dataset.id);
+                return;
+            }
+
+            const header = e.target.closest('.daily-income-header');
+            if (header) {
+                const key = header.dataset.key;
+                const details = document.getElementById('daily-details-' + key);
+                if (details) {
+                    const isOpen = details.style.display !== 'none';
+                    details.style.display = isOpen ? 'none' : 'block';
+                    header.classList.toggle('expanded', !isOpen);
+                }
+            }
+        });
+
+        async function deleteTransactionConfirm(id) {
+            if (!confirm("ushbu yozuvni o'chirishni xohlaysizmi?")) return;
+            try {
+                await api('/api/transactions/' + id, { method: 'DELETE' });
+                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+                showToast("yozuv o'chirildi");
+                await loadTransactions();
+            } catch (e) {
+                showToast("o'chirib bo'lmadi");
             }
         }
+
+        // Tahrirlash modali
+        let editingId = null;
+        let editingType = null;
+
+        function openEditModal(dataset) {
+            editingId = dataset.id;
+            editingType = dataset.type;
+            $('#editAmount').value = dataset.amount;
+            $('#editCategory').value = dataset.category || '';
+            $('#editNote').value = dataset.note || '';
+            $('#editCategoryGroup').style.display = dataset.type === 'expense' ? 'block' : 'none';
+            $('#editModalTitle').textContent = dataset.type === 'income' ? 'Kirimni tahrirlash' : 'Xarajatni tahrirlash';
+            $('#editModalOverlay').classList.add('show');
+        }
+
+        function closeEditModal() {
+            $('#editModalOverlay').classList.remove('show');
+            editingId = null;
+            editingType = null;
+        }
+
+        $('#editModalOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'editModalOverlay') closeEditModal();
+        });
+
+        $('#editCancelBtn').addEventListener('click', closeEditModal);
+
+        $('#editSaveBtn').addEventListener('click', async () => {
+            const amount = parseFloat($('#editAmount').value);
+            const category = $('#editCategory').value.trim();
+            const note = $('#editNote').value.trim();
+
+            if (!amount || amount <= 0) {
+                showToast('summani kiriting');
+                return;
+            }
+            if (editingType === 'expense' && !category) {
+                showToast('kategoriya kerak');
+                return;
+            }
+
+            try {
+                await api('/api/transactions/' + editingId, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        type: editingType,
+                        amount,
+                        category: editingType === 'expense' ? category : 'kirim',
+                        note,
+                    })
+                });
+                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                showToast('yangilandi');
+                closeEditModal();
+                await loadTransactions();
+            } catch (e) {
+                showToast('xatolik: ' + e.message);
+            }
+        });
+
+        $('#editDeleteBtn').addEventListener('click', async () => {
+            if (!editingId) return;
+            if (!confirm("o'chirishni xohlaysizmi?")) return;
+            try {
+                await api('/api/transactions/' + editingId, { method: 'DELETE' });
+                showToast("o'chirildi");
+                closeEditModal();
+                await loadTransactions();
+            } catch (e) {
+                showToast("o'chirib bo'lmadi");
+            }
+        });
 
         // Boshlash
         checkAccess();
