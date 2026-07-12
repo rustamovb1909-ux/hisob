@@ -117,6 +117,19 @@ def add_transaction(telegram_id, type_, amount, category, note):
     return row
 
 
+def get_transaction(telegram_id, tx_id):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        "SELECT * FROM transactions WHERE id = %s AND telegram_id = %s",
+        (tx_id, telegram_id)
+    )
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row
+
+
 def delete_transaction(telegram_id, tx_id):
     conn = get_conn()
     cur = conn.cursor()
@@ -129,6 +142,22 @@ def delete_transaction(telegram_id, tx_id):
     cur.close()
     conn.close()
     return deleted > 0
+
+
+def update_transaction(telegram_id, tx_id, type_, amount, category, note):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        UPDATE transactions
+        SET type = %s, amount = %s, category = %s, note = %s
+        WHERE id = %s AND telegram_id = %s
+        RETURNING *
+    """, (type_, amount, category, note, tx_id, telegram_id))
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return row
 
 
 def get_monthly_summary(telegram_id):
@@ -317,6 +346,43 @@ def api_add_transaction():
         "note": row["note"],
         "created_at": to_utc_iso(row["created_at"]),
     }), 201
+
+
+@app.route("/api/transactions/<int:tx_id>", methods=["PUT"])
+def api_update_transaction(tx_id):
+    user, err = require_registered()
+    if err:
+        return err
+
+    data = request.get_json(silent=True) or {}
+    type_ = data.get("type")
+    amount = data.get("amount")
+    category = (data.get("category") or "").strip()[:100]
+    note = (data.get("note") or "").strip()[:200]
+
+    if type_ not in ("income", "expense"):
+        return jsonify({"error": "noto'g'ri turi"}), 400
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        return jsonify({"error": "noto'g'ri summa"}), 400
+    if amount <= 0:
+        return jsonify({"error": "summa 0 dan katta bo'lishi kerak"}), 400
+    if type_ == "expense" and not category:
+        return jsonify({"error": "kategoriya kerak"}), 400
+
+    row = update_transaction(user["id"], tx_id, type_, amount, category or "kirim", note)
+    if not row:
+        return jsonify({"error": "topilmadi"}), 404
+
+    return jsonify({
+        "id": row["id"],
+        "type": row["type"],
+        "amount": float(row["amount"]),
+        "category": row["category"],
+        "note": row["note"],
+        "created_at": to_utc_iso(row["created_at"]),
+    }), 200
 
 
 @app.route("/api/transactions/<int:tx_id>", methods=["DELETE"])
