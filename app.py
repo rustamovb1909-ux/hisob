@@ -131,6 +131,43 @@ def delete_transaction(telegram_id, tx_id):
     return deleted > 0
 
 
+def get_monthly_summary(telegram_id):
+    """Joriy oy (UTC bo'yicha) uchun kirim/xarajat yig'indisi va xarajat
+    kategoriyalari bo'yicha taqsimotni qaytaradi. Bot orqali "Oylik hisobot"
+    tugmasi bosilganda ishlatiladi."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT type, category, SUM(amount) AS total
+        FROM transactions
+        WHERE telegram_id = %s
+          AND date_trunc('month', created_at) = date_trunc('month', NOW())
+        GROUP BY type, category
+        ORDER BY total DESC
+    """, (telegram_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    income = 0.0
+    expense = 0.0
+    categories = []
+    for r in rows:
+        total = float(r["total"])
+        if r["type"] == "income":
+            income += total
+        else:
+            expense += total
+            categories.append((r["category"], total))
+
+    return {
+        "income": income,
+        "expense": expense,
+        "balance": income - expense,
+        "categories": categories,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Telegram WebApp initData tekshiruvi
 # https://core.telegram.org/bots/webapps#validating-data-received-via-the-web-app
