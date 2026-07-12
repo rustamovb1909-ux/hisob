@@ -16,6 +16,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import (
     Message,
+    CallbackQuery,
     ReplyKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardRemove,
@@ -25,7 +26,7 @@ from aiogram.types import (
     MenuButtonWebApp,
 )
 
-from app import get_user, upsert_user, init_db
+from app import get_user, upsert_user, init_db, get_monthly_summary
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("hisobchi-bot")
@@ -54,12 +55,51 @@ def contact_keyboard() -> ReplyKeyboardMarkup:
 
 
 def webapp_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
-            text="📊 Hisobchini ochish",
-            web_app=WebAppInfo(url=WEBAPP_URL),
-        )
-    ]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="📊 Hisobchini ochish",
+                web_app=WebAppInfo(url=WEBAPP_URL),
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="📅 Oylik hisobot",
+                callback_data="monthly_report",
+            )
+        ],
+    ])
+
+
+UZ_MONTHS = [
+    "yanvar", "fevral", "mart", "aprel", "may", "iyun",
+    "iyul", "avgust", "sentyabr", "oktyabr", "noyabr", "dekabr",
+]
+
+
+def format_monthly_report(summary: dict) -> str:
+    import datetime
+    now = datetime.datetime.now()
+    month_name = UZ_MONTHS[now.month - 1]
+
+    def fmt(n):
+        return f"{n:,.0f}".replace(",", " ")
+
+    lines = [f"📅 <b>{month_name.capitalize()} oyi uchun hisobot</b>\n"]
+    lines.append(f"➕ Kirim: <b>{fmt(summary['income'])} so'm</b>")
+    lines.append(f"➖ Xarajat: <b>{fmt(summary['expense'])} so'm</b>")
+    lines.append(f"💰 Balans: <b>{fmt(summary['balance'])} so'm</b>")
+
+    if summary["categories"]:
+        lines.append("\n<b>Xarajatlar taqsimoti:</b>")
+        total_expense = summary["expense"] or 1
+        for cat, val in summary["categories"][:8]:
+            pct = round(val / total_expense * 100)
+            lines.append(f"• {cat} — {fmt(val)} so'm ({pct}%)")
+    else:
+        lines.append("\nBu oyda hali xarajat kiritilmagan.")
+
+    return "\n".join(lines)
 
 
 @router.message(CommandStart())
@@ -130,6 +170,19 @@ async def block_unregistered(message: Message):
             "Davom etish uchun avval telefon raqamingizni yuboring 👇",
             reply_markup=contact_keyboard(),
         )
+
+
+@router.callback_query(F.data == "monthly_report")
+async def on_monthly_report(callback: CallbackQuery):
+    user = get_user(callback.from_user.id)
+    if not user:
+        await callback.answer("Avval ro'yxatdan o'ting", show_alert=True)
+        return
+
+    summary = get_monthly_summary(callback.from_user.id)
+    text = format_monthly_report(summary)
+    await callback.message.answer(text)
+    await callback.answer()
 
 
 async def _run_polling():
