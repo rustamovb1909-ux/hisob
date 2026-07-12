@@ -527,7 +527,7 @@
             z-index: 100;
             box-shadow: var(--shadow);
             width: calc(100% - 32px);
-            max-width: 380px;
+            max-width: 420px;
         }
 
         .nav-btn {
@@ -535,7 +535,7 @@
             background: none;
             border: none;
             color: var(--text2);
-            padding: 10px 6px;
+            padding: 10px 4px;
             border-radius: 20px;
             display: flex;
             flex-direction: column;
@@ -544,9 +544,10 @@
             cursor: pointer;
             transition: all 0.2s;
             font-weight: 600;
-            font-size: 0.62rem;
+            font-size: 0.58rem;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.3px;
+            min-width: 0;
         }
 
         .nav-btn.active {
@@ -555,30 +556,76 @@
         }
 
         .nav-symbol {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 700;
         }
 
         .nav-btn.add-income-btn {
             background: rgba(0, 212, 170, 0.18);
             color: var(--green);
-            margin: -6px 3px;
-            padding: 14px 6px;
+            margin: -6px 2px;
+            padding: 14px 4px;
             border-radius: 18px;
         }
 
         .nav-btn.add-expense-btn {
             background: rgba(255, 71, 87, 0.18);
             color: var(--red);
-            margin: -6px 3px;
-            padding: 14px 6px;
+            margin: -6px 2px;
+            padding: 14px 4px;
             border-radius: 18px;
         }
 
         .nav-btn.add-income-btn .nav-symbol,
         .nav-btn.add-expense-btn .nav-symbol {
-            font-size: 1.6rem;
+            font-size: 1.5rem;
         }
+
+        /* Oylik hisobot */
+        .month-item {
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .month-item:last-child {
+            border-bottom: none;
+        }
+
+        .month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .month-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #ffffff;
+            text-transform: capitalize;
+        }
+
+        .month-balance {
+            font-size: 0.95rem;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+        }
+
+        .month-balance.green { color: var(--green); }
+        .month-balance.red { color: var(--red); }
+
+        .month-stats {
+            display: flex;
+            gap: 14px;
+        }
+
+        .month-stat {
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .month-stat.green { color: var(--green); }
+        .month-stat.red { color: var(--red); }
 
         /* Sahifalar */
         .view {
@@ -698,6 +745,15 @@
             <!-- Asosiy sahifa -->
             <section class="view active" id="view-dashboard">
                 <div class="section-header">
+                    <h2 class="section-title">kunlik kirimlar</h2>
+                </div>
+                <div class="card" id="dailyIncomeCard">
+                    <div class="empty-box">
+                        <div class="empty-text">hali kirim kiritilmagan</div>
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin-top: 4px;">
                     <h2 class="section-title">xarajatlar taqsimoti</h2>
                     <span class="section-badge" id="totalExpenseBadge">0 so'm</span>
                 </div>
@@ -708,7 +764,7 @@
                 </div>
 
                 <div class="section-header" style="margin-top: 4px;">
-                    <h2 class="section-title">so'nggi yozuvlar</h2>
+                    <h2 class="section-title">so'nggi xarajatlar</h2>
                 </div>
                 <div class="card" id="recentCard">
                     <div class="empty-box">
@@ -761,10 +817,31 @@
                 </div>
             </section>
 
+            <!-- Oylik hisobot sahifasi -->
+            <section class="view" id="view-monthly">
+                <div class="section-header">
+                    <h2 class="section-title">oylik hisobot</h2>
+                </div>
+                <div class="card" id="monthlyCard">
+                    <div class="empty-box">
+                        <div class="empty-text">hali ma'lumot yo'q</div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Tarix sahifasi -->
             <section class="view" id="view-history">
                 <div class="section-header">
-                    <h2 class="section-title">barcha yozuvlar</h2>
+                    <h2 class="section-title">kunlik kirimlar</h2>
+                </div>
+                <div class="card" id="dailyIncomeHistoryCard">
+                    <div class="empty-box">
+                        <div class="empty-text">hali kirim kiritilmagan</div>
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin-top: 4px;">
+                    <h2 class="section-title">xarajatlar tarixi</h2>
                     <span class="section-badge" id="totalCount">0 ta</span>
                 </div>
                 <div class="card" id="historyCard">
@@ -791,12 +868,17 @@
             <span class="nav-symbol">−</span>
             xarajat
         </button>
+        <button class="nav-btn" data-view="monthly">
+            <span class="nav-symbol">📅</span>
+            oylik
+        </button>
         <button class="nav-btn" data-view="history">
             <span class="nav-symbol">☰</span>
             tarix
         </button>
     </nav>
     </div><!-- /app-root -->
+
 
     <script>
         const BOT_USERNAME = {{ bot_username | tojson }};
@@ -978,6 +1060,64 @@
             }
         });
 
+        // Barcha yozuvlarni oy bo'yicha guruhlab, har oy uchun kirim/xarajat/
+        // balansni hisoblaydi (mahalliy vaqt bo'yicha oy hisoblanadi).
+        const UZ_MONTHS = [
+            'yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
+            'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'
+        ];
+
+        function groupByMonth(txs) {
+            const groups = {};
+            txs.forEach(t => {
+                const d = new Date(t.created_at);
+                const key = d.getFullYear() + '-' + d.getMonth();
+                if (!groups[key]) {
+                    groups[key] = {
+                        year: d.getFullYear(),
+                        month: d.getMonth(),
+                        income: 0,
+                        expense: 0,
+                        sortKey: d.getFullYear() * 12 + d.getMonth(),
+                    };
+                }
+                if (t.type === 'income') {
+                    groups[key].income += t.amount;
+                } else {
+                    groups[key].expense += t.amount;
+                }
+            });
+            return Object.values(groups).sort((a, b) => b.sortKey - a.sortKey);
+        }
+
+        function renderMonthly() {
+            const el = $('#monthlyCard');
+            const months = groupByMonth(transactions);
+
+            if (months.length === 0) {
+                el.innerHTML = '<div class="empty-box"><div class="empty-text">hali ma\'lumot yo\'q</div></div>';
+                return;
+            }
+
+            el.innerHTML = months.map(m => {
+                const balance = m.income - m.expense;
+                const balCls = balance >= 0 ? 'green' : 'red';
+                const monthLabel = UZ_MONTHS[m.month] + ' ' + m.year;
+                return `
+                    <div class="month-item">
+                        <div class="month-header">
+                            <span class="month-name">${monthLabel}</span>
+                            <span class="month-balance ${balCls}">${balance >= 0 ? '+' : '−'}${fmt(Math.abs(balance))} so'm</span>
+                        </div>
+                        <div class="month-stats">
+                            <span class="month-stat green">+${fmt(m.income)} kirim</span>
+                            <span class="month-stat red">−${fmt(m.expense)} xarajat</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         // Tranzaksiyalarni yuklash
         async function loadTransactions() {
             try {
@@ -987,12 +1127,59 @@
             }
             renderDashboard();
             renderHistory();
+            renderMonthly();
         }
 
         function isThisMonth(iso) {
             const d = new Date(iso);
             const now = new Date();
             return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        }
+
+        // Bir xil kunda qo'shilgan bir nechta kirimni bitta "kunlik kirim"
+        // qatoriga birlashtiradi (mahalliy vaqt bo'yicha kun hisoblanadi).
+        function groupIncomeByDay(txs) {
+            const groups = {};
+            txs.forEach(t => {
+                if (t.type !== 'income') return;
+                const d = new Date(t.created_at);
+                const key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+                if (!groups[key]) {
+                    groups[key] = { total: 0, count: 0, latest: t.created_at, dateObj: d };
+                }
+                groups[key].total += t.amount;
+                groups[key].count += 1;
+                if (new Date(t.created_at) > new Date(groups[key].latest)) {
+                    groups[key].latest = t.created_at;
+                    groups[key].dateObj = d;
+                }
+            });
+            return Object.values(groups).sort((a, b) => new Date(b.latest) - new Date(a.latest));
+        }
+
+        function renderDailyIncomeCard(elementId, limit) {
+            const el = $('#' + elementId);
+            let groups = groupIncomeByDay(transactions);
+            if (limit) groups = groups.slice(0, limit);
+
+            if (groups.length === 0) {
+                el.innerHTML = '<div class="empty-box"><div class="empty-text">hali kirim kiritilmagan</div></div>';
+                return;
+            }
+
+            el.innerHTML = groups.map(g => {
+                const dateStr = g.dateObj.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
+                return `
+                    <div class="tx-item">
+                        <div class="tx-icon-box income-box">+</div>
+                        <div class="tx-info">
+                            <div class="tx-desc">Kunlik kirim</div>
+                            <div class="tx-date">${dateStr}${g.count > 1 ? ' · ' + g.count + ' ta kirim' : ''}</div>
+                        </div>
+                        <div class="tx-sum green">+${fmt(g.total)}</div>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Ranglar palitrasi
@@ -1070,12 +1257,16 @@
                 }, 50);
             }
 
-            // So'nggi yozuvlar
+            // Kunlik kirimlar (alohida bo'lim)
+            renderDailyIncomeCard('dailyIncomeCard', 5);
+
+            // So'nggi xarajatlar
             const recentCard = $('#recentCard');
-            if (transactions.length === 0) {
-                recentCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali hech narsa yozilmadi</div></div>';
+            const recentExpenses = transactions.filter(t => t.type === 'expense').slice(0, 6);
+            if (recentExpenses.length === 0) {
+                recentCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali xarajat yozilmadi</div></div>';
             } else {
-                recentCard.innerHTML = transactions.slice(0, 6).map(t => createTxHTML(t, false)).join('');
+                recentCard.innerHTML = recentExpenses.map(t => createTxHTML(t, false)).join('');
             }
         }
 
@@ -1102,13 +1293,16 @@
         }
 
         function renderHistory() {
-            const historyCard = $('#historyCard');
-            $('#totalCount').textContent = transactions.length + ' ta';
+            renderDailyIncomeCard('dailyIncomeHistoryCard', null);
 
-            if (transactions.length === 0) {
-                historyCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali hech narsa yozilmadi</div></div>';
+            const historyCard = $('#historyCard');
+            const expenses = transactions.filter(t => t.type === 'expense');
+            $('#totalCount').textContent = expenses.length + ' ta';
+
+            if (expenses.length === 0) {
+                historyCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali xarajat yozilmadi</div></div>';
             } else {
-                historyCard.innerHTML = transactions.map(t => createTxHTML(t, true)).join('');
+                historyCard.innerHTML = expenses.map(t => createTxHTML(t, true)).join('');
 
                 historyCard.querySelectorAll('.tx-delete').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
