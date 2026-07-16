@@ -1843,25 +1843,74 @@
             renderDebts();
         }
 
-        function createDebtHTML(d) {
-            const date = new Date(d.created_at);
-            const dateStr = date.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
-            const cls = d.direction === 'given' ? 'green' : 'red';
-            const boxCls = d.direction === 'given' ? 'income-box' : 'expense-box';
+        // Bir xil odamga tegishli bir nechta qarz yozuvini bitta qatorga
+        // birlashtiradi (masalan: Azizga avval 100 ming, keyin яна 50 ming —
+        // endi "Aziz — 150 000" bo'lib, bosilganda ikkalasi alohida ko'rinadi).
+        function groupDebtsByPerson(list) {
+            const groups = {};
+            list.forEach(d => {
+                const key = d.direction + '|' + d.person_name.trim().toLowerCase();
+                if (!groups[key]) {
+                    groups[key] = {
+                        key, direction: d.direction, person_name: d.person_name,
+                        items: [], totalUnpaid: 0, totalPaid: 0, latest: d.created_at,
+                    };
+                }
+                const g = groups[key];
+                g.items.push(d);
+                if (d.is_paid) g.totalPaid += d.amount;
+                else g.totalUnpaid += d.amount;
+                if (new Date(d.created_at) > new Date(g.latest)) {
+                    g.latest = d.created_at;
+                    g.person_name = d.person_name; // eng oxirgi yozuvdagi yozilishi
+                }
+            });
+            return Object.values(groups).sort((a, b) => new Date(b.latest) - new Date(a.latest));
+        }
+
+        function renderDebtGroupHTML(g, uniqueKey) {
+            const cls = g.direction === 'given' ? 'green' : 'red';
+            const boxCls = g.direction === 'given' ? 'income-box' : 'expense-box';
+            const allPaid = g.totalUnpaid === 0 && g.totalPaid > 0;
+            const displayAmount = allPaid ? g.totalPaid : g.totalUnpaid;
+            const countLabel = g.items.length > 1 ? ` · ${g.items.length} ta yozuv` : '';
+            const paidNote = (!allPaid && g.totalPaid > 0) ? ` · ${fmt(g.totalPaid)} to'landi` : '';
+            const statusLabel = allPaid ? "to'langan" : 'qarzdor';
+
+            const itemsHTML = g.items
+                .slice()
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                .map(d => {
+                    const dateStr = new Date(d.created_at).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
+                    return `
+                        <div class="tx-item debt-item ${d.is_paid ? 'debt-paid' : ''}">
+                            <div class="tx-icon-box ${boxCls}">👤</div>
+                            <div class="tx-info">
+                                <div class="tx-desc">${dateStr}</div>
+                                <div class="tx-date">${d.note ? escapeAttr(d.note) : "izohsiz"}</div>
+                            </div>
+                            <div class="tx-sum ${cls}">${fmt(d.amount)}</div>
+                            <div class="tx-actions">
+                                <button class="debt-paid-btn" data-id="${d.id}" data-paid="${d.is_paid ? '0' : '1'}" title="${d.is_paid ? 'qaytadan ochish' : "to'landi deb belgilash"}">${d.is_paid ? '↺' : '✓'}</button>
+                                <button class="tx-icon-btn edit-btn debt-edit-btn" data-id="${d.id}" data-person="${escapeAttr(d.person_name)}" data-amount="${d.amount}" data-note="${escapeAttr(d.note)}">✏️</button>
+                                <button class="tx-icon-btn delete-btn debt-delete-btn" data-id="${d.id}">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
 
             return `
-                <div class="tx-item debt-item ${d.is_paid ? 'debt-paid' : ''}">
+                <div class="daily-income-header tx-item ${allPaid ? 'debt-paid' : ''}" data-key="${uniqueKey}">
                     <div class="tx-icon-box ${boxCls}">👤</div>
                     <div class="tx-info">
-                        <div class="tx-desc">${escapeAttr(d.person_name)}</div>
-                        <div class="tx-date">${dateStr}${d.note ? '<span class="tx-note-small"> · ' + escapeAttr(d.note) + '</span>' : ''}</div>
+                        <div class="tx-desc">${escapeAttr(g.person_name)}</div>
+                        <div class="tx-date">${statusLabel}${countLabel}${paidNote}</div>
                     </div>
-                    <div class="tx-sum ${cls}">${fmt(d.amount)}</div>
-                    <div class="tx-actions">
-                        <button class="debt-paid-btn" data-id="${d.id}" data-paid="${d.is_paid ? '0' : '1'}" title="${d.is_paid ? 'qaytadan ochish' : "to'landi deb belgilash"}">${d.is_paid ? '↺' : '✓'}</button>
-                        <button class="tx-icon-btn edit-btn debt-edit-btn" data-id="${d.id}" data-person="${escapeAttr(d.person_name)}" data-amount="${d.amount}" data-note="${escapeAttr(d.note)}">✏️</button>
-                        <button class="tx-icon-btn delete-btn debt-delete-btn" data-id="${d.id}">🗑️</button>
-                    </div>
+                    <div class="tx-sum ${cls}">${fmt(displayAmount)}</div>
+                    <span class="daily-income-chevron">▾</span>
+                </div>
+                <div class="daily-income-details" id="daily-details-${uniqueKey}" style="display:none;">
+                    ${itemsHTML}
                 </div>
             `;
         }
@@ -1901,15 +1950,17 @@
             $('#debtGivenBadge').textContent = fmt(givenUnpaidTotal) + " so'm";
             $('#debtTakenBadge').textContent = fmt(takenUnpaidTotal) + " so'm";
 
+            const givenGroups = groupDebtsByPerson(given);
             const givenCard = $('#debtGivenCard');
-            givenCard.innerHTML = given.length === 0
+            givenCard.innerHTML = givenGroups.length === 0
                 ? '<div class="empty-box"><div class="empty-text">hali qarz yo\'q</div></div>'
-                : given.map(createDebtHTML).join('');
+                : givenGroups.map((g, i) => renderDebtGroupHTML(g, 'given-' + i)).join('');
 
+            const takenGroups = groupDebtsByPerson(taken);
             const takenCard = $('#debtTakenCard');
-            takenCard.innerHTML = taken.length === 0
+            takenCard.innerHTML = takenGroups.length === 0
                 ? '<div class="empty-box"><div class="empty-text">hali qarz yo\'q</div></div>'
-                : taken.map(createDebtHTML).join('');
+                : takenGroups.map((g, i) => renderDebtGroupHTML(g, 'taken-' + i)).join('');
         }
 
         // Yo'nalish tanlash (Menga qarzdor / Men qarzdorman)
