@@ -610,6 +610,92 @@
             cursor: pointer;
         }
 
+        /* Qarz daftari */
+        .debt-type-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            background: var(--input-bg);
+            border-radius: 14px;
+            padding: 4px;
+        }
+
+        .debt-type-btn {
+            flex: 1;
+            padding: 11px 6px;
+            border: none;
+            border-radius: 11px;
+            background: transparent;
+            color: var(--text2);
+            font-weight: 700;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .debt-type-btn.active[data-direction="given"] {
+            background: rgba(0, 212, 170, 0.18);
+            color: var(--green);
+        }
+
+        .debt-type-btn.active[data-direction="taken"] {
+            background: rgba(255, 71, 87, 0.18);
+            color: var(--red);
+        }
+
+        .debt-summary-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .debt-summary-box {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .debt-summary-title {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text2);
+            margin-bottom: 6px;
+        }
+
+        .debt-summary-value {
+            font-size: 1.15rem;
+            font-weight: 800;
+        }
+
+        .debt-item.debt-paid {
+            opacity: 0.45;
+        }
+
+        .debt-item.debt-paid .tx-desc {
+            text-decoration: line-through;
+        }
+
+        .debt-paid-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--input-bg);
+            color: var(--text2);
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .debt-item.debt-paid .debt-paid-btn {
+            background: rgba(0, 212, 170, 0.15);
+            color: var(--green);
+            border-color: transparent;
+        }
+
         /* Pastki navigatsiya */
         .bottom-nav {
             position: fixed;
@@ -926,6 +1012,62 @@
                 </div>
             </section>
 
+            <!-- Qarz daftari sahifasi -->
+            <section class="view" id="view-debts">
+                <div class="section-header">
+                    <h2 class="section-title">qarz daftari</h2>
+                </div>
+                <div class="card" id="debtSummaryCard">
+                    <div class="empty-box">
+                        <div class="empty-text">hali qarz yo'q</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="debt-type-toggle">
+                        <button type="button" class="debt-type-btn active" data-direction="given" id="debtGivenBtn">Menga qarzdor</button>
+                        <button type="button" class="debt-type-btn" data-direction="taken" id="debtTakenBtn">Men qarzdorman</button>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label">ism</label>
+                        <input type="text" class="field-input" id="debtPersonName" placeholder="masalan: Aziz" maxlength="100">
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label">summa (so'm)</label>
+                        <input type="number" class="field-input" id="debtAmount" placeholder="100000" inputmode="numeric">
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label">izoh (ixtiyoriy)</label>
+                        <input type="text" class="field-input" id="debtNote" placeholder="nima uchun..." maxlength="200">
+                    </div>
+
+                    <button class="submit-btn" id="debtSubmitBtn" style="background: var(--blue); box-shadow: 0 8px 20px rgba(91, 106, 240, 0.25);">+ qo'shish</button>
+                </div>
+
+                <div class="section-header" style="margin-top: 4px;">
+                    <h2 class="section-title">menga qarzdorlar</h2>
+                    <span class="section-badge" id="debtGivenBadge">0 so'm</span>
+                </div>
+                <div class="card" id="debtGivenCard">
+                    <div class="empty-box">
+                        <div class="empty-text">hali qarz yo'q</div>
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin-top: 4px;">
+                    <h2 class="section-title">men qarzdorman</h2>
+                    <span class="section-badge" id="debtTakenBadge">0 so'm</span>
+                </div>
+                <div class="card" id="debtTakenCard">
+                    <div class="empty-box">
+                        <div class="empty-text">hali qarz yo'q</div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Tarix sahifasi -->
             <section class="view" id="view-history">
                 <div class="section-header">
@@ -973,6 +1115,36 @@
         </div>
     </div>
 
+    <!-- Qarzni tahrirlash modali -->
+    <div class="modal-overlay" id="debtEditModalOverlay">
+        <div class="modal-sheet">
+            <div class="modal-title">Qarzni tahrirlash</div>
+
+            <div class="field-group">
+                <label class="field-label">ism</label>
+                <input type="text" class="field-input" id="debtEditPersonName" maxlength="100">
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">summa (so'm)</label>
+                <input type="number" class="field-input" id="debtEditAmount" inputmode="numeric">
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">izoh (ixtiyoriy)</label>
+                <input type="text" class="field-input" id="debtEditNote" maxlength="200">
+            </div>
+
+            <div class="modal-actions">
+                <button class="submit-btn" id="debtEditSaveBtn" style="background: var(--blue); box-shadow: 0 8px 20px rgba(91, 106, 240, 0.25);">saqlash</button>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-cancel-btn" id="debtEditCancelBtn">bekor qilish</button>
+                <button class="modal-cancel-btn" id="debtEditDeleteBtn" style="color: var(--red); border-color: rgba(255,71,87,0.3);">o'chirish</button>
+            </div>
+        </div>
+    </div>
+
     <nav class="bottom-nav">
         <button class="nav-btn active" data-view="dashboard">
             <span class="nav-symbol">≡</span>
@@ -989,6 +1161,10 @@
         <button class="nav-btn" data-view="monthly">
             <span class="nav-symbol">📅</span>
             oylik
+        </button>
+        <button class="nav-btn" data-view="debts">
+            <span class="nav-symbol">🤝</span>
+            qarz
         </button>
         <button class="nav-btn" data-view="history">
             <span class="nav-symbol">☰</span>
@@ -1086,6 +1262,7 @@
                 $('#app-root').classList.add('ready');
 
                 await loadTransactions();
+                await loadDebts();
             } catch (e) {
                 $('#gateErrorText').textContent = e.message || "Serverga ulanib bo'lmadi";
                 showGate('gateError');
@@ -1646,6 +1823,246 @@
                 showToast("o'chirildi");
                 closeEditModal();
                 await loadTransactions();
+            } catch (e) {
+                showToast("o'chirib bo'lmadi");
+            }
+        });
+
+        // ============================================================
+        // Qarz daftari
+        // ============================================================
+        let debts = [];
+        let selectedDebtDirection = 'given';
+
+        async function loadDebts() {
+            try {
+                debts = await api('/api/debts');
+            } catch (e) {
+                debts = [];
+            }
+            renderDebts();
+        }
+
+        function createDebtHTML(d) {
+            const date = new Date(d.created_at);
+            const dateStr = date.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
+            const cls = d.direction === 'given' ? 'green' : 'red';
+            const boxCls = d.direction === 'given' ? 'income-box' : 'expense-box';
+
+            return `
+                <div class="tx-item debt-item ${d.is_paid ? 'debt-paid' : ''}">
+                    <div class="tx-icon-box ${boxCls}">👤</div>
+                    <div class="tx-info">
+                        <div class="tx-desc">${escapeAttr(d.person_name)}</div>
+                        <div class="tx-date">${dateStr}${d.note ? '<span class="tx-note-small"> · ' + escapeAttr(d.note) + '</span>' : ''}</div>
+                    </div>
+                    <div class="tx-sum ${cls}">${fmt(d.amount)}</div>
+                    <div class="tx-actions">
+                        <button class="debt-paid-btn" data-id="${d.id}" data-paid="${d.is_paid ? '0' : '1'}" title="${d.is_paid ? 'qaytadan ochish' : "to'landi deb belgilash"}">${d.is_paid ? '↺' : '✓'}</button>
+                        <button class="tx-icon-btn edit-btn debt-edit-btn" data-id="${d.id}" data-person="${escapeAttr(d.person_name)}" data-amount="${d.amount}" data-note="${escapeAttr(d.note)}">✏️</button>
+                        <button class="tx-icon-btn delete-btn debt-delete-btn" data-id="${d.id}">🗑️</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDebts() {
+            const given = debts.filter(d => d.direction === 'given');
+            const taken = debts.filter(d => d.direction === 'taken');
+
+            const givenUnpaidTotal = given.filter(d => !d.is_paid).reduce((s, d) => s + d.amount, 0);
+            const takenUnpaidTotal = taken.filter(d => !d.is_paid).reduce((s, d) => s + d.amount, 0);
+
+            // Umumiy balans karta
+            const summaryCard = $('#debtSummaryCard');
+            if (debts.length === 0) {
+                summaryCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali qarz yo\'q</div></div>';
+            } else {
+                const net = givenUnpaidTotal - takenUnpaidTotal;
+                const netCls = net >= 0 ? 'green' : 'red';
+                summaryCard.innerHTML = `
+                    <div class="debt-summary-row">
+                        <div class="debt-summary-box">
+                            <div class="debt-summary-title">menga qarzdor</div>
+                            <div class="debt-summary-value green">+${fmt(givenUnpaidTotal)}</div>
+                        </div>
+                        <div class="debt-summary-box">
+                            <div class="debt-summary-title">men qarzdorman</div>
+                            <div class="debt-summary-value red">−${fmt(takenUnpaidTotal)}</div>
+                        </div>
+                    </div>
+                    <div class="total-expense-row">
+                        <span class="total-expense-label">sof balans</span>
+                        <span class="total-expense-value ${netCls}" style="color: var(--${net >= 0 ? 'green' : 'red'});">${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))} so'm</span>
+                    </div>
+                `;
+            }
+
+            $('#debtGivenBadge').textContent = fmt(givenUnpaidTotal) + " so'm";
+            $('#debtTakenBadge').textContent = fmt(takenUnpaidTotal) + " so'm";
+
+            const givenCard = $('#debtGivenCard');
+            givenCard.innerHTML = given.length === 0
+                ? '<div class="empty-box"><div class="empty-text">hali qarz yo\'q</div></div>'
+                : given.map(createDebtHTML).join('');
+
+            const takenCard = $('#debtTakenCard');
+            takenCard.innerHTML = taken.length === 0
+                ? '<div class="empty-box"><div class="empty-text">hali qarz yo\'q</div></div>'
+                : taken.map(createDebtHTML).join('');
+        }
+
+        // Yo'nalish tanlash (Menga qarzdor / Men qarzdorman)
+        $('#debtGivenBtn').addEventListener('click', () => {
+            selectedDebtDirection = 'given';
+            $('#debtGivenBtn').classList.add('active');
+            $('#debtTakenBtn').classList.remove('active');
+        });
+
+        $('#debtTakenBtn').addEventListener('click', () => {
+            selectedDebtDirection = 'taken';
+            $('#debtTakenBtn').classList.add('active');
+            $('#debtGivenBtn').classList.remove('active');
+        });
+
+        // Yangi qarz qo'shish
+        $('#debtSubmitBtn').addEventListener('click', async () => {
+            const personName = $('#debtPersonName').value.trim();
+            const amount = parseFloat($('#debtAmount').value);
+            const note = $('#debtNote').value.trim();
+
+            if (!personName) {
+                showToast('ismni kiriting');
+                return;
+            }
+            if (!amount || amount <= 0) {
+                showToast('summani kiriting');
+                return;
+            }
+
+            try {
+                await api('/api/debts', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        direction: selectedDebtDirection,
+                        person_name: personName,
+                        amount,
+                        note,
+                    })
+                });
+
+                $('#debtPersonName').value = '';
+                $('#debtAmount').value = '';
+                $('#debtNote').value = '';
+
+                showToast("qarz qo'shildi");
+                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+                await loadDebts();
+            } catch (e) {
+                showToast('xatolik: ' + e.message);
+            }
+        });
+
+        // Qarz qatoridagi tugmalar: to'landi belgilash / tahrirlash / o'chirish
+        let editingDebtId = null;
+
+        function openDebtEditModal(dataset) {
+            editingDebtId = dataset.id;
+            $('#debtEditPersonName').value = dataset.person || '';
+            $('#debtEditAmount').value = dataset.amount || '';
+            $('#debtEditNote').value = dataset.note || '';
+            $('#debtEditModalOverlay').classList.add('show');
+        }
+
+        function closeDebtEditModal() {
+            $('#debtEditModalOverlay').classList.remove('show');
+            editingDebtId = null;
+        }
+
+        document.querySelectorAll('#view-debts').forEach(section => {
+            section.addEventListener('click', async (e) => {
+                const paidBtn = e.target.closest('.debt-paid-btn');
+                if (paidBtn) {
+                    e.stopPropagation();
+                    try {
+                        await api('/api/debts/' + paidBtn.dataset.id, {
+                            method: 'PUT',
+                            body: JSON.stringify({ is_paid: paidBtn.dataset.paid === '1' })
+                        });
+                        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                        await loadDebts();
+                    } catch (e) {
+                        showToast('xatolik yuz berdi');
+                    }
+                    return;
+                }
+
+                const editBtn = e.target.closest('.debt-edit-btn');
+                if (editBtn) {
+                    e.stopPropagation();
+                    openDebtEditModal(editBtn.dataset);
+                    return;
+                }
+
+                const delBtn = e.target.closest('.debt-delete-btn');
+                if (delBtn) {
+                    e.stopPropagation();
+                    if (!confirm("ushbu qarz yozuvini o'chirishni xohlaysizmi?")) return;
+                    try {
+                        await api('/api/debts/' + delBtn.dataset.id, { method: 'DELETE' });
+                        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+                        showToast("o'chirildi");
+                        await loadDebts();
+                    } catch (e) {
+                        showToast("o'chirib bo'lmadi");
+                    }
+                    return;
+                }
+            });
+        });
+
+        $('#debtEditModalOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'debtEditModalOverlay') closeDebtEditModal();
+        });
+
+        $('#debtEditCancelBtn').addEventListener('click', closeDebtEditModal);
+
+        $('#debtEditSaveBtn').addEventListener('click', async () => {
+            const personName = $('#debtEditPersonName').value.trim();
+            const amount = parseFloat($('#debtEditAmount').value);
+            const note = $('#debtEditNote').value.trim();
+
+            if (!personName) {
+                showToast('ismni kiriting');
+                return;
+            }
+            if (!amount || amount <= 0) {
+                showToast('summani kiriting');
+                return;
+            }
+
+            try {
+                await api('/api/debts/' + editingDebtId, {
+                    method: 'PUT',
+                    body: JSON.stringify({ person_name: personName, amount, note })
+                });
+                showToast('yangilandi');
+                closeDebtEditModal();
+                await loadDebts();
+            } catch (e) {
+                showToast('xatolik: ' + e.message);
+            }
+        });
+
+        $('#debtEditDeleteBtn').addEventListener('click', async () => {
+            if (!editingDebtId) return;
+            if (!confirm("o'chirishni xohlaysizmi?")) return;
+            try {
+                await api('/api/debts/' + editingDebtId, { method: 'DELETE' });
+                showToast("o'chirildi");
+                closeDebtEditModal();
+                await loadDebts();
             } catch (e) {
                 showToast("o'chirib bo'lmadi");
             }
