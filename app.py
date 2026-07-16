@@ -57,6 +57,20 @@ def init_db():
         )
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tx_user ON transactions(telegram_id)")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS debts (
+            id SERIAL PRIMARY KEY,
+            telegram_id BIGINT NOT NULL REFERENCES users(telegram_id) ON DELETE CASCADE,
+            direction TEXT NOT NULL CHECK (direction IN ('given', 'taken')),
+            person_name TEXT NOT NULL,
+            amount NUMERIC NOT NULL,
+            note TEXT DEFAULT '',
+            is_paid BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT NOW(),
+            paid_at TIMESTAMP
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_debts_user ON debts(telegram_id)")
     conn.commit()
     cur.close()
     conn.close()
@@ -195,6 +209,96 @@ def get_monthly_summary(telegram_id):
         "balance": income - expense,
         "categories": categories,
     }
+
+
+# ---------------------------------------------------------------------------
+# Qarz daftari
+# ---------------------------------------------------------------------------
+def get_debts(telegram_id):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        "SELECT * FROM debts WHERE telegram_id = %s ORDER BY is_paid ASC, created_at DESC",
+        (telegram_id,)
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def add_debt(telegram_id, direction, person_name, amount, note):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        INSERT INTO debts (telegram_id, direction, person_name, amount, note)
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING *
+    """, (telegram_id, direction, person_name, amount, note))
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return row
+
+
+def get_debt(telegram_id, debt_id):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        "SELECT * FROM debts WHERE id = %s AND telegram_id = %s",
+        (debt_id, telegram_id)
+    )
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row
+
+
+def update_debt(telegram_id, debt_id, person_name, amount, note):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        UPDATE debts
+        SET person_name = %s, amount = %s, note = %s
+        WHERE id = %s AND telegram_id = %s
+        RETURNING *
+    """, (person_name, amount, note, debt_id, telegram_id))
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return row
+
+
+def set_debt_paid(telegram_id, debt_id, is_paid):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        UPDATE debts
+        SET is_paid = %s, paid_at = CASE WHEN %s THEN NOW() ELSE NULL END
+        WHERE id = %s AND telegram_id = %s
+        RETURNING *
+    """, (is_paid, is_paid, debt_id, telegram_id))
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return row
+
+
+def delete_debt(telegram_id, debt_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM debts WHERE id = %s AND telegram_id = %s",
+        (debt_id, telegram_id)
+    )
+    deleted = cur.rowcount
+    conn.commit()
+    cur.close()
+    conn.close()
+    return deleted > 0
 
 
 # ---------------------------------------------------------------------------
@@ -391,6 +495,105 @@ def api_delete_transaction(tx_id):
     if err:
         return err
     ok = delete_transaction(user["id"], tx_id)
+    if not ok:
+        return jsonify({"error": "topilmadi"}), 404
+    return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# API — Qarz daftari
+# ---------------------------------------------------------------------------
+def serialize_debt(row):
+    return {
+        "id": row["id"],
+        "direction": row["direction"],
+        "person_name": row["person_name"],
+        "amount": float(row["amount"]),
+        "note": row["note"],
+        "is_paid": row["is_paid"],
+        "created_at": to_utc_iso(row["created_at"]),
+        "paid_at": to_utc_iso(row["paid_at"]) if row["paid_at"] else None,
+    }
+
+
+@app.route("/api/debts", methods=["GET"])
+def api_list_debts():
+    user, err = require_registered()
+    if err:
+        return err
+    rows = get_debts(user["id"])
+    return jsonify([serialize_debt(r) for r in rows])
+
+
+@app.route("/api/debts", methods=["POST"])
+def api_add_debt():
+    user, err = require_registered()
+    if err:
+        return err
+
+    data = request.get_json(silent=True) or {}
+    direction = data.get("direction")
+    person_name = (data.get("person_name") or "").strip()[:100]
+    amount = data.get("amount")
+    note = (data.get("note") or "").strip()[:200]
+
+    if direction not in ("given", "taken"):
+        return jsonify({"error": "noto'g'ri turi"}), 400
+    if not person_name:
+        return jsonify({"error": "ism kiritilmagan"}), 400
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        return jsonify({"error": "noto'g'ri summa"}), 400
+    if amount <= 0:
+        return jsonify({"error": "summa 0 dan katta bo'lishi kerak"}), 400
+
+    row = add_debt(user["id"], direction, person_name, amount, note)
+    return jsonify(serialize_debt(row)), 201
+
+
+@app.route("/api/debts/<int:debt_id>", methods=["PUT"])
+def api_update_debt(debt_id):
+    user, err = require_registered()
+    if err:
+        return err
+
+    existing = get_debt(user["id"], debt_id)
+    if not existing:
+        return jsonify({"error": "topilmadi"}), 404
+
+    data = request.get_json(silent=True) or {}
+
+    # Faqat "to'landi" holatini almashtirish so'ralgan bo'lishi mumkin
+    if "is_paid" in data and len(data) == 1:
+        row = set_debt_paid(user["id"], debt_id, bool(data["is_paid"]))
+        return jsonify(serialize_debt(row))
+
+    person_name = (data.get("person_name") or "").strip()[:100]
+    amount = data.get("amount")
+    note = (data.get("note") or "").strip()[:200]
+
+    if not person_name:
+        return jsonify({"error": "ism kiritilmagan"}), 400
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        return jsonify({"error": "noto'g'ri summa"}), 400
+    if amount <= 0:
+        return jsonify({"error": "summa 0 dan katta bo'lishi kerak"}), 400
+
+    row = update_debt(user["id"], debt_id, person_name, amount, note)
+    if not row:
+        return jsonify({"error": "topilmadi"}), 404
+    return jsonify(serialize_debt(row))
+
+
+@app.route("/api/debts/<int:debt_id>", methods=["DELETE"])
+def api_delete_debt(debt_id):
+    user, err = require_registered()
+    if err:
+        return err
+    ok = delete_debt(user["id"], debt_id)
     if not ok:
         return jsonify({"error": "topilmadi"}), 404
     return jsonify({"success": True})
