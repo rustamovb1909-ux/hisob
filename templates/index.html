@@ -696,6 +696,50 @@
             border-color: transparent;
         }
 
+        /* Excel/PDF yuklab olish */
+        .export-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .export-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 18px 10px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .export-btn:active {
+            transform: scale(0.97);
+            background: rgba(91, 106, 240, 0.1);
+        }
+
+        .export-btn-icon {
+            font-size: 1.6rem;
+        }
+
+        .export-btn.loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .export-hint {
+            margin-top: 12px;
+            font-size: 0.72rem;
+            color: var(--text2);
+            text-align: center;
+        }
+
         /* Pastki navigatsiya */
         .bottom-nav {
             position: fixed;
@@ -1009,6 +1053,23 @@
                     <div class="empty-box">
                         <div class="empty-text">hali ma'lumot yo'q</div>
                     </div>
+                </div>
+
+                <div class="section-header" style="margin-top: 4px;">
+                    <h2 class="section-title">hisobotni yuklab olish</h2>
+                </div>
+                <div class="card">
+                    <div class="export-row">
+                        <button class="export-btn" id="exportExcelBtn">
+                            <span class="export-btn-icon">📊</span>
+                            <span>Excel</span>
+                        </button>
+                        <button class="export-btn" id="exportPdfBtn">
+                            <span class="export-btn-icon">📄</span>
+                            <span>PDF</span>
+                        </button>
+                    </div>
+                    <div class="export-hint">Barcha kirim, xarajat va qarzlar hisoboti yuklanadi</div>
                 </div>
             </section>
 
@@ -2117,6 +2178,47 @@
             } catch (e) {
                 showToast("o'chirib bo'lmadi");
             }
+        });
+
+        // Excel / PDF hisobotni yuklab olish
+        async function downloadReport(url, btn, filenameFallback) {
+            btn.classList.add('loading');
+            try {
+                const res = await fetch(url, {
+                    headers: { 'X-Telegram-Init-Data': initData() }
+                });
+                if (!res.ok) {
+                    throw new Error("hisobotni yaratib bo'lmadi");
+                }
+                const blob = await res.blob();
+                const disposition = res.headers.get('Content-Disposition') || '';
+                const match = disposition.match(/filename="?([^"]+)"?/);
+                const filename = match ? match[1] : filenameFallback;
+
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 4000);
+
+                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                showToast('hisobot yuklandi');
+            } catch (e) {
+                showToast('xatolik: ' + e.message);
+            } finally {
+                btn.classList.remove('loading');
+            }
+        }
+
+        $('#exportExcelBtn').addEventListener('click', () => {
+            downloadReport('/api/export/excel', $('#exportExcelBtn'), 'hisobchi.xlsx');
+        });
+
+        $('#exportPdfBtn').addEventListener('click', () => {
+            downloadReport('/api/export/pdf', $('#exportPdfBtn'), 'hisobchi.pdf');
         });
 
         // Boshlash
