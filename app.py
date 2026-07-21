@@ -9,11 +9,24 @@ import os
 import hmac
 import hashlib
 import json
+import io
+from datetime import datetime
 from urllib.parse import parse_qsl
 
 import psycopg2
 import psycopg2.extras
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_file
+
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 BOT_USERNAME = os.environ.get("BOT_USERNAME", "")  # masalan: mening_hisobchi_bot (@ belgisisiz)
@@ -299,6 +312,274 @@ def delete_debt(telegram_id, debt_id):
     cur.close()
     conn.close()
     return deleted > 0
+
+
+# ---------------------------------------------------------------------------
+# Excel / PDF hisobot generatsiyasi
+# ---------------------------------------------------------------------------
+UZ_MONTHS = [
+    "yanvar", "fevral", "mart", "aprel", "may", "iyun",
+    "iyul", "avgust", "sentyabr", "oktyabr", "noyabr", "dekabr",
+]
+
+BRAND_DARK = "0A0E27"
+BRAND_GREEN = "00B894"
+BRAND_RED = "FF4757"
+
+
+def _monthly_breakdown(transactions):
+    """Tranzaksiyalarni oy bo'yicha guruhlab, har oy uchun kirim/xarajat/
+    balansni hisoblaydi (eng yangi oy birinchi)."""
+    months = {}
+    for t in transactions:
+        d = t["created_at"]
+        key = (d.year, d.month)
+        if key not in months:
+            months[key] = {"year": d.year, "month": d.month, "income": 0.0, "expense": 0.0}
+        if t["type"] == "income":
+            months[key]["income"] += float(t["amount"])
+        else:
+            months[key]["expense"] += float(t["amount"])
+    return sorted(months.values(), key=lambda m: (m["year"], m["month"]), reverse=True)
+
+
+def generate_excel_report(telegram_id, display_name):
+    transactions = get_transactions(telegram_id)
+    debts = get_debts(telegram_id)
+
+    wb = openpyxl.Workbook()
+
+    header_fill = PatternFill(start_color=BRAND_DARK, end_color=BRAND_DARK, fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=11)
+    title_font = Font(bold=True, size=14, color=BRAND_DARK)
+    thin_border = Border(*(Side(style="thin", color="DDDDDD"),) * 4)
+
+    def style_header_row(ws, row_num, ncols):
+        for col in range(1, ncols + 1):
+            cell = ws.cell(row=row_num, column=col)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    def autosize(ws, widths):
+        for i, w in enumerate(widths, start=1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+
+    # --- 1-bet: Oylik xulosa ---
+    ws1 = wb.active
+    ws1.title = "Oylik xulosa"
+    ws1["A1"] = "Hisobchi — Moliyaviy hisobot"
+    ws1["A1"].font = title_font
+    ws1["A2"] = f"Foydalanuvchi: {display_name}"
+    ws1["A3"] = f"Yaratildi: {datetime.utcnow().strftime('%d.%m.%Y %H:%M')} (UTC)"
+
+    headers = ["Oy", "Kirim (so'm)", "Xarajat (so'm)", "Balans (so'm)"]
+    ws1.append([])
+    ws1.append(headers)
+    style_header_row(ws1, 5, len(headers))
+
+    for m in _monthly_breakdown(transactions):
+        balance = m["income"] - m["expense"]
+        label = f"{UZ_MONTHS[m['month'] - 1]} {m['year']}"
+        ws1.append([label, m["income"], m["expense"], balance])
+
+    for row in ws1.iter_rows(min_row=6, max_row=ws1.max_row, min_col=1, max_col=4):
+        for cell in row:
+            cell.border = thin_border
+            if cell.column > 1:
+                cell.number_format = "#,##0"
+
+    autosize(ws1, [22, 18, 18, 18])
+
+    # --- 2-bet: Barcha tranzaksiyalar ---
+    ws2 = wb.create_sheet("Tranzaksiyalar")
+    headers2 = ["Sana", "Turi", "Summa (so'm)", "Kategoriya", "Izoh"]
+    ws2.append(headers2)
+    style_header_row(ws2, 1, len(headers2))
+
+    for t in transactions:
+        ws2.append([
+            t["created_at"].strftime("%d.%m.%Y %H:%M"),
+            "Kirim" if t["type"] == "income" else "Xarajat",
+            float(t["amount"]),
+            t["category"] or "",
+            t["note"] or "",
+        ])
+
+    for row in ws2.iter_rows(min_row=2, max_row=max(ws2.max_row, 2), min_col=1, max_col=5):
+        for cell in row:
+            cell.border = thin_border
+            if cell.column == 3:
+                cell.number_format = "#,##0"
+
+    autosize(ws2, [18, 12, 16, 20, 30])
+
+    # --- 3-bet: Qarz daftari ---
+    ws3 = wb.create_sheet("Qarz daftari")
+    headers3 = ["Ism", "Yo'nalish", "Summa (so'm)", "Holat", "Sana", "Izoh"]
+    ws3.append(headers3)
+    style_header_row(ws3, 1, len(headers3))
+
+    for d in debts:
+        ws3.append([
+            d["person_name"],
+            "Menga qarzdor" if d["direction"] == "given" else "Men qarzdorman",
+            float(d["amount"]),
+            "To'landi" if d["is_paid"] else "To'lanmagan",
+            d["created_at"].strftime("%d.%m.%Y"),
+            d["note"] or "",
+        ])
+
+    for row in ws3.iter_rows(min_row=2, max_row=max(ws3.max_row, 2), min_col=1, max_col=6):
+        for cell in row:
+            cell.border = thin_border
+            if cell.column == 3:
+                cell.number_format = "#,##0"
+
+    autosize(ws3, [18, 16, 16, 14, 14, 30])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
+
+
+def generate_pdf_report(telegram_id, display_name):
+    transactions = get_transactions(telegram_id)
+    debts = get_debts(telegram_id)
+    months = _monthly_breakdown(transactions)
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        topMargin=18 * mm, bottomMargin=18 * mm,
+        leftMargin=16 * mm, rightMargin=16 * mm,
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "TitleUz", parent=styles["Title"], fontSize=18,
+        textColor=colors.HexColor("#0A0E27"), alignment=TA_CENTER, spaceAfter=4,
+    )
+    meta_style = ParagraphStyle(
+        "MetaUz", parent=styles["Normal"], fontSize=9,
+        textColor=colors.HexColor("#666666"), alignment=TA_CENTER, spaceAfter=14,
+    )
+    section_style = ParagraphStyle(
+        "SectionUz", parent=styles["Heading2"], fontSize=13,
+        textColor=colors.HexColor("#0A0E27"), spaceBefore=14, spaceAfter=8,
+    )
+
+    def fmt_num(n):
+        return f"{n:,.0f}".replace(",", " ")
+
+    elements = [
+        Paragraph("Hisobchi — Moliyaviy hisobot", title_style),
+        Paragraph(
+            f"Foydalanuvchi: {display_name} &nbsp;&nbsp;|&nbsp;&nbsp; "
+            f"Yaratildi: {datetime.utcnow().strftime('%d.%m.%Y %H:%M')} (UTC)",
+            meta_style,
+        ),
+    ]
+
+    total_income = sum(float(t["amount"]) for t in transactions if t["type"] == "income")
+    total_expense = sum(float(t["amount"]) for t in transactions if t["type"] == "expense")
+
+    elements.append(Paragraph("Umumiy holat", section_style))
+    summary_data = [
+        ["Jami kirim", "Jami xarajat", "Balans"],
+        [f"{fmt_num(total_income)} so'm", f"{fmt_num(total_expense)} so'm",
+         f"{fmt_num(total_income - total_expense)} so'm"],
+    ]
+    summary_table = Table(summary_data, colWidths=[55 * mm, 55 * mm, 55 * mm])
+    summary_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0A0E27")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#DDDDDD")),
+    ]))
+    elements.append(summary_table)
+
+    if months:
+        elements.append(Paragraph("Oylik xulosa", section_style))
+        month_rows = [["Oy", "Kirim", "Xarajat", "Balans"]]
+        for m in months:
+            balance = m["income"] - m["expense"]
+            month_rows.append([
+                f"{UZ_MONTHS[m['month'] - 1]} {m['year']}",
+                fmt_num(m["income"]), fmt_num(m["expense"]), fmt_num(balance),
+            ])
+        month_table = Table(month_rows, colWidths=[45 * mm, 40 * mm, 40 * mm, 40 * mm])
+        month_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0A0E27")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+            ("ALIGN", (0, 0), (0, -1), "LEFT"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F6FA")]),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#DDDDDD")),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        elements.append(month_table)
+
+    if debts:
+        elements.append(Paragraph("Qarz daftari", section_style))
+        debt_rows = [["Ism", "Yo'nalish", "Summa", "Holat"]]
+        for d in debts:
+            debt_rows.append([
+                d["person_name"],
+                "Menga qarzdor" if d["direction"] == "given" else "Men qarzdorman",
+                fmt_num(float(d["amount"])),
+                "To'landi" if d["is_paid"] else "To'lanmagan",
+            ])
+        debt_table = Table(debt_rows, colWidths=[45 * mm, 40 * mm, 35 * mm, 45 * mm])
+        debt_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0A0E27")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("ALIGN", (2, 0), (2, -1), "RIGHT"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F6FA")]),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#DDDDDD")),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        elements.append(debt_table)
+
+    if transactions:
+        elements.append(Spacer(1, 6))
+        elements.append(Paragraph("Barcha tranzaksiyalar", section_style))
+        tx_rows = [["Sana", "Turi", "Summa", "Kategoriya"]]
+        for t in transactions:
+            tx_rows.append([
+                t["created_at"].strftime("%d.%m.%Y %H:%M"),
+                "Kirim" if t["type"] == "income" else "Xarajat",
+                fmt_num(float(t["amount"])),
+                t["category"] or "",
+            ])
+        tx_table = Table(tx_rows, colWidths=[38 * mm, 25 * mm, 32 * mm, 65 * mm], repeatRows=1)
+        tx_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0A0E27")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("ALIGN", (2, 0), (2, -1), "RIGHT"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F6FA")]),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#DDDDDD")),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(tx_table)
+
+    doc.build(elements)
+    buf.seek(0)
+    return buf
 
 
 # ---------------------------------------------------------------------------
@@ -597,6 +878,45 @@ def api_delete_debt(debt_id):
     if not ok:
         return jsonify({"error": "topilmadi"}), 404
     return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# API — Excel / PDF hisobot
+# ---------------------------------------------------------------------------
+@app.route("/api/export/excel")
+def api_export_excel():
+    user, err = require_registered()
+    if err:
+        return err
+    db_user = get_user(user["id"])
+    display_name = db_user["first_name"] or user.get("first_name", "Foydalanuvchi")
+
+    buf = generate_excel_report(user["id"], display_name)
+    filename = f"hisobchi_{datetime.utcnow().strftime('%Y%m%d')}.xlsx"
+    return send_file(
+        buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@app.route("/api/export/pdf")
+def api_export_pdf():
+    user, err = require_registered()
+    if err:
+        return err
+    db_user = get_user(user["id"])
+    display_name = db_user["first_name"] or user.get("first_name", "Foydalanuvchi")
+
+    buf = generate_pdf_report(user["id"], display_name)
+    filename = f"hisobchi_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
+    return send_file(
+        buf,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
 
 
 if __name__ == "__main__":
