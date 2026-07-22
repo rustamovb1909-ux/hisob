@@ -15,6 +15,7 @@ from urllib.parse import parse_qsl
 
 import psycopg2
 import psycopg2.extras
+import requests
 from flask import Flask, request, jsonify, render_template, send_file
 
 import openpyxl
@@ -883,6 +884,61 @@ def api_delete_debt(debt_id):
 # ---------------------------------------------------------------------------
 # API — Excel / PDF hisobot
 # ---------------------------------------------------------------------------
+BOT_TOKEN_ENV = os.environ.get("BOT_TOKEN", "")
+
+
+def send_telegram_document(chat_id, filename, file_bytes, caption=""):
+    """Faylni Telegram Bot API orqali to'g'ridan-to'g'ri foydalanuvchi
+    chatiga yuboradi. Telegram ichidagi brauzer (WebView) orqali fayl
+    yuklab olish ko'p qurilmalarda ishlamay qolishi mumkin — shuning
+    uchun fayl brauzerga emas, bevosita bot chatiga jo'natiladi."""
+    url = f"https://api.telegram.org/bot{BOT_TOKEN_ENV}/sendDocument"
+    files = {"document": (filename, file_bytes)}
+    data = {"chat_id": chat_id, "caption": caption}
+    resp = requests.post(url, data=data, files=files, timeout=30)
+    resp.raise_for_status()
+    result = resp.json()
+    if not result.get("ok"):
+        raise RuntimeError(result.get("description", "Telegram xatosi"))
+    return result
+
+
+@app.route("/api/export/send", methods=["POST"])
+def api_export_send():
+    """Hisobotni (Excel yoki PDF) yaratib, to'g'ridan-to'g'ri foydalanuvchi
+    bilan botning chatiga jo'natadi. Frontend endi faylni brauzerda
+    yuklab olishga urinmaydi (bu Telegram WebView'da ishonchsiz) —
+    o'rniga shu endpointni chaqirib, natijani bot chatidan kutadi."""
+    user, err = require_registered()
+    if err:
+        return err
+
+    data = request.get_json(silent=True) or {}
+    fmt = data.get("format")
+    if fmt not in ("excel", "pdf"):
+        return jsonify({"error": "noto'g'ri format"}), 400
+
+    db_user = get_user(user["id"])
+    display_name = db_user["first_name"] or user.get("first_name", "Foydalanuvchi")
+
+    try:
+        if fmt == "excel":
+            buf = generate_excel_report(user["id"], display_name)
+            filename = f"hisobchi_{datetime.utcnow().strftime('%Y%m%d')}.xlsx"
+        else:
+            buf = generate_pdf_report(user["id"], display_name)
+            filename = f"hisobchi_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
+
+        send_telegram_document(
+            user["id"], filename, buf.read(),
+            caption="📊 Moliyaviy hisobotingiz tayyor."
+        )
+    except Exception as e:
+        return jsonify({"error": f"hisobotni yuborib bo'lmadi: {e}"}), 500
+
+    return jsonify({"success": True})
+
+
 @app.route("/api/export/excel")
 def api_export_excel():
     user, err = require_registered()
