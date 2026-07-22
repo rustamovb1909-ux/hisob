@@ -81,7 +81,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
+            color: var(--blue);
+        }
+
+        .gate-icon svg {
+            width: 30px;
+            height: 30px;
         }
 
         .gate-title {
@@ -725,7 +730,14 @@
         }
 
         .export-btn-icon {
-            font-size: 1.6rem;
+            width: 26px;
+            height: 26px;
+            display: flex;
+        }
+
+        .export-btn-icon svg {
+            width: 100%;
+            height: 100%;
         }
 
         .export-btn.loading {
@@ -783,8 +795,16 @@
         }
 
         .nav-symbol {
-            font-size: 1.2rem;
-            font-weight: 700;
+            width: 21px;
+            height: 21px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-symbol svg {
+            width: 100%;
+            height: 100%;
         }
 
         .nav-btn.add-income-btn {
@@ -805,7 +825,23 @@
 
         .nav-btn.add-income-btn .nav-symbol,
         .nav-btn.add-expense-btn .nav-symbol {
-            font-size: 1.5rem;
+            width: 26px;
+            height: 26px;
+        }
+
+        /* Umumiy SVG ikonka o'lchamlari */
+        .icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .icon svg {
+            width: 100%;
+            height: 100%;
         }
 
         /* Oylik hisobot */
@@ -918,7 +954,7 @@
 
     <!-- Telegram tashqarisida ochilgan holat -->
     <div class="gate-screen hidden" id="gateNoTelegram">
-        <div class="gate-icon">🔒</div>
+        <div class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
         <div class="gate-title">Faqat Telegram orqali</div>
         <div class="gate-text">Bu ilova faqat Hisobchi Telegram boti ichidan ochiladi.</div>
         <button class="gate-btn" id="openBotFromNoTg">Botga o'tish</button>
@@ -926,7 +962,7 @@
 
     <!-- Ro'yxatdan o'tmagan holat -->
     <div class="gate-screen hidden" id="gateNotRegistered">
-        <div class="gate-icon">📱</div>
+        <div class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div>
         <div class="gate-title">Avval ro'yxatdan o'ting</div>
         <div class="gate-text">Hisobchidan foydalanish uchun botda telefon raqamingizni tasdiqlashingiz kerak.</div>
         <button class="gate-btn" id="openBotFromNotReg">Botga o'tish</button>
@@ -934,7 +970,7 @@
 
     <!-- Ulanish xatosi -->
     <div class="gate-screen hidden" id="gateError">
-        <div class="gate-icon">⚠️</div>
+        <div class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <div class="gate-title">Xatolik yuz berdi</div>
         <div class="gate-text" id="gateErrorText">Serverga ulanib bo'lmadi. Qayta urinib ko'ring.</div>
         <button class="gate-btn" id="retryBtn">Qayta urinish</button>
@@ -1056,20 +1092,20 @@
                 </div>
 
                 <div class="section-header" style="margin-top: 4px;">
-                    <h2 class="section-title">hisobotni yuklab olish</h2>
+                    <h2 class="section-title">hisobotni olish</h2>
                 </div>
                 <div class="card">
                     <div class="export-row">
                         <button class="export-btn" id="exportExcelBtn">
-                            <span class="export-btn-icon">📊</span>
+                            <span class="export-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></span>
                             <span>Excel</span>
                         </button>
                         <button class="export-btn" id="exportPdfBtn">
-                            <span class="export-btn-icon">📄</span>
+                            <span class="export-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg></span>
                             <span>PDF</span>
                         </button>
                     </div>
-                    <div class="export-hint">Barcha kirim, xarajat va qarzlar hisoboti yuklanadi</div>
+                    <div class="export-hint">Bosilsa, hisobot fayli to'g'ridan-to'g'ri botga yuboriladi</div>
                 </div>
             </section>
 
@@ -1208,27 +1244,27 @@
 
     <nav class="bottom-nav">
         <button class="nav-btn active" data-view="dashboard">
-            <span class="nav-symbol">≡</span>
+            <span class="nav-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
             asosiy
         </button>
         <button class="nav-btn add-income-btn" data-view="add-income">
-            <span class="nav-symbol">+</span>
+            <span class="nav-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
             kirim
         </button>
         <button class="nav-btn add-expense-btn" data-view="add-expense">
-            <span class="nav-symbol">−</span>
+            <span class="nav-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
             xarajat
         </button>
         <button class="nav-btn" data-view="monthly">
-            <span class="nav-symbol">📅</span>
+            <span class="nav-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
             oylik
         </button>
         <button class="nav-btn" data-view="debts">
-            <span class="nav-symbol">🤝</span>
+            <span class="nav-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
             qarz
         </button>
         <button class="nav-btn" data-view="history">
-            <span class="nav-symbol">☰</span>
+            <span class="nav-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>
             tarix
         </button>
     </nav>
@@ -1249,6 +1285,34 @@
 
         const $ = (s) => document.querySelector(s);
         const $$ = (s) => document.querySelectorAll(s);
+
+        // O'zimiz chizgan SVG ikonkalar to'plami (emoji ishlatilmaydi —
+        // shunda barcha qurilma va ilovalarda bir xil, tiniq ko'rinadi).
+        // Har biri currentColor'dan foydalanadi, shuning uchun joylashgan
+        // joyning rangini avtomatik oladi.
+        const ICONS = {
+            grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+            plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+            minus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+            calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+            users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+            list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+            edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+            trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
+            check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+            undo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 10 9 10"/></svg>',
+            chevronDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+            arrowUp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>',
+            arrowDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>',
+            person: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+            fileSpreadsheet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>',
+            fileText: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>',
+            send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
+        };
+
+        function icon(name, extraClass) {
+            return `<span class="icon ${extraClass || ''}">${ICONS[name]}</span>`;
+        }
 
         function fmt(n) {
             return Math.round(n).toLocaleString('uz-UZ').replace(/,/g, ' ');
@@ -1538,15 +1602,15 @@
                     const timeStr = new Date(t.created_at).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
                     return `
                         <div class="tx-item">
-                            <div class="tx-icon-box income-box">+</div>
+                            <div class="tx-icon-box income-box">${icon('arrowUp')}</div>
                             <div class="tx-info">
                                 <div class="tx-desc">Kirim</div>
                                 <div class="tx-date">${timeStr}${t.note ? '<span class="tx-note-small"> · ' + t.note + '</span>' : ''}</div>
                             </div>
                             <div class="tx-sum green">+${fmt(t.amount)}</div>
                             <div class="tx-actions">
-                                <button class="tx-icon-btn edit-btn" data-id="${t.id}" data-type="income" data-amount="${t.amount}" data-category="" data-note="${escapeAttr(t.note)}">✏️</button>
-                                <button class="tx-icon-btn delete-btn" data-id="${t.id}">🗑️</button>
+                                <button class="tx-icon-btn edit-btn" data-id="${t.id}" data-type="income" data-amount="${t.amount}" data-category="" data-note="${escapeAttr(t.note)}">${icon('edit')}</button>
+                                <button class="tx-icon-btn delete-btn" data-id="${t.id}">${icon('trash')}</button>
                             </div>
                         </div>
                     `;
@@ -1554,13 +1618,13 @@
 
             return `
                 <div class="daily-income-header tx-item" data-key="${uniqueKey}">
-                    <div class="tx-icon-box income-box">+</div>
+                    <div class="tx-icon-box income-box">${icon('arrowUp')}</div>
                     <div class="tx-info">
                         <div class="tx-desc">Kunlik kirim</div>
                         <div class="tx-date">${dateStr}${g.count > 1 ? ' · ' + g.count + ' ta kirim' : ''}</div>
                     </div>
                     <div class="tx-sum green">+${fmt(g.total)}</div>
-                    <span class="daily-income-chevron">▾</span>
+                    <span class="daily-income-chevron">${icon('chevronDown')}</span>
                 </div>
                 <div class="daily-income-details" id="daily-details-${uniqueKey}" style="display:none;">
                     ${itemsHTML}
@@ -1675,19 +1739,19 @@
             const sign = t.type === 'income' ? '+' : '−';
             const cls = t.type === 'income' ? 'green' : 'red';
             const boxCls = t.type === 'income' ? 'income-box' : 'expense-box';
-            const icon = t.type === 'income' ? '+' : '−';
+            const boxIcon = t.type === 'income' ? icon('arrowUp') : icon('arrowDown');
             const desc = t.type === 'income' ? 'Kirim' : t.category;
 
             const actionsHTML = showActions ? `
                 <div class="tx-actions">
-                    <button class="tx-icon-btn edit-btn" data-id="${t.id}" data-type="${t.type}" data-amount="${t.amount}" data-category="${escapeAttr(t.category)}" data-note="${escapeAttr(t.note)}">✏️</button>
-                    <button class="tx-icon-btn delete-btn" data-id="${t.id}">🗑️</button>
+                    <button class="tx-icon-btn edit-btn" data-id="${t.id}" data-type="${t.type}" data-amount="${t.amount}" data-category="${escapeAttr(t.category)}" data-note="${escapeAttr(t.note)}">${icon('edit')}</button>
+                    <button class="tx-icon-btn delete-btn" data-id="${t.id}">${icon('trash')}</button>
                 </div>
             ` : '';
 
             return `
                 <div class="tx-item">
-                    <div class="tx-icon-box ${boxCls}">${icon}</div>
+                    <div class="tx-icon-box ${boxCls}">${boxIcon}</div>
                     <div class="tx-info">
                         <div class="tx-desc">${desc}</div>
                         <div class="tx-date">${dateStr}${t.note ? '<span class="tx-note-small"> · ' + t.note + '</span>' : ''}</div>
@@ -1945,16 +2009,16 @@
                     const dateStr = new Date(d.created_at).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
                     return `
                         <div class="tx-item debt-item ${d.is_paid ? 'debt-paid' : ''}">
-                            <div class="tx-icon-box ${boxCls}">👤</div>
+                            <div class="tx-icon-box ${boxCls}">${icon('person')}</div>
                             <div class="tx-info">
                                 <div class="tx-desc">${dateStr}</div>
                                 <div class="tx-date">${d.note ? escapeAttr(d.note) : "izohsiz"}</div>
                             </div>
                             <div class="tx-sum ${cls}">${fmt(d.amount)}</div>
                             <div class="tx-actions">
-                                <button class="debt-paid-btn" data-id="${d.id}" data-paid="${d.is_paid ? '0' : '1'}" title="${d.is_paid ? 'qaytadan ochish' : "to'landi deb belgilash"}">${d.is_paid ? '↺' : '✓'}</button>
-                                <button class="tx-icon-btn edit-btn debt-edit-btn" data-id="${d.id}" data-person="${escapeAttr(d.person_name)}" data-amount="${d.amount}" data-note="${escapeAttr(d.note)}">✏️</button>
-                                <button class="tx-icon-btn delete-btn debt-delete-btn" data-id="${d.id}">🗑️</button>
+                                <button class="debt-paid-btn" data-id="${d.id}" data-paid="${d.is_paid ? '0' : '1'}" title="${d.is_paid ? 'qaytadan ochish' : "to'landi deb belgilash"}">${d.is_paid ? icon('undo') : icon('check')}</button>
+                                <button class="tx-icon-btn edit-btn debt-edit-btn" data-id="${d.id}" data-person="${escapeAttr(d.person_name)}" data-amount="${d.amount}" data-note="${escapeAttr(d.note)}">${icon('edit')}</button>
+                                <button class="tx-icon-btn delete-btn debt-delete-btn" data-id="${d.id}">${icon('trash')}</button>
                             </div>
                         </div>
                     `;
@@ -1962,13 +2026,13 @@
 
             return `
                 <div class="daily-income-header tx-item ${allPaid ? 'debt-paid' : ''}" data-key="${uniqueKey}">
-                    <div class="tx-icon-box ${boxCls}">👤</div>
+                    <div class="tx-icon-box ${boxCls}">${icon('person')}</div>
                     <div class="tx-info">
                         <div class="tx-desc">${escapeAttr(g.person_name)}</div>
                         <div class="tx-date">${statusLabel}${countLabel}${paidNote}</div>
                     </div>
                     <div class="tx-sum ${cls}">${fmt(displayAmount)}</div>
-                    <span class="daily-income-chevron">▾</span>
+                    <span class="daily-income-chevron">${icon('chevronDown')}</span>
                 </div>
                 <div class="daily-income-details" id="daily-details-${uniqueKey}" style="display:none;">
                     ${itemsHTML}
@@ -2180,32 +2244,19 @@
             }
         });
 
-        // Excel / PDF hisobotni yuklab olish
-        async function downloadReport(url, btn, filenameFallback) {
+        // Excel / PDF hisobotni bevosita botga jo'natish. Telegram ichidagi
+        // brauzer (WebView) orqali faylni "yuklab olish" ko'p qurilmalarda
+        // sukut bilan ishlamay qoladi — shuning uchun fayl brauzerga emas,
+        // to'g'ridan-to'g'ri bot chatiga yuboriladi.
+        async function sendReportToBot(format, btn) {
             btn.classList.add('loading');
             try {
-                const res = await fetch(url, {
-                    headers: { 'X-Telegram-Init-Data': initData() }
+                await api('/api/export/send', {
+                    method: 'POST',
+                    body: JSON.stringify({ format })
                 });
-                if (!res.ok) {
-                    throw new Error("hisobotni yaratib bo'lmadi");
-                }
-                const blob = await res.blob();
-                const disposition = res.headers.get('Content-Disposition') || '';
-                const match = disposition.match(/filename="?([^"]+)"?/);
-                const filename = match ? match[1] : filenameFallback;
-
-                const blobUrl = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = blobUrl;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                setTimeout(() => URL.revokeObjectURL(blobUrl), 4000);
-
                 if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                showToast('hisobot yuklandi');
+                showToast('hisobot botga yuborildi');
             } catch (e) {
                 showToast('xatolik: ' + e.message);
             } finally {
@@ -2214,11 +2265,11 @@
         }
 
         $('#exportExcelBtn').addEventListener('click', () => {
-            downloadReport('/api/export/excel', $('#exportExcelBtn'), 'hisobchi.xlsx');
+            sendReportToBot('excel', $('#exportExcelBtn'));
         });
 
         $('#exportPdfBtn').addEventListener('click', () => {
-            downloadReport('/api/export/pdf', $('#exportPdfBtn'), 'hisobchi.pdf');
+            sendReportToBot('pdf', $('#exportPdfBtn'));
         });
 
         // Boshlash
