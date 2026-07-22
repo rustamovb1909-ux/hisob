@@ -80,10 +80,15 @@ def init_db():
             amount NUMERIC NOT NULL,
             note TEXT DEFAULT '',
             is_paid BOOLEAN DEFAULT FALSE,
+            is_payment BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT NOW(),
             paid_at TIMESTAMP
         )
     """)
+    # Eski (avvalroq yaratilgan) jadvallarda is_payment ustuni bo'lmasligi
+    # mumkin — CREATE TABLE IF NOT EXISTS uni qo'shmaydi, shuning uchun
+    # mavjud bo'lmasa qo'shib qo'yamiz (xavfsiz, ma'lumotlarni o'chirmaydi).
+    cur.execute("ALTER TABLE debts ADD COLUMN IF NOT EXISTS is_payment BOOLEAN DEFAULT FALSE")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_debts_user ON debts(telegram_id)")
     conn.commit()
     cur.close()
@@ -241,14 +246,14 @@ def get_debts(telegram_id):
     return rows
 
 
-def add_debt(telegram_id, direction, person_name, amount, note):
+def add_debt(telegram_id, direction, person_name, amount, note, is_payment=False):
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
-        INSERT INTO debts (telegram_id, direction, person_name, amount, note)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO debts (telegram_id, direction, person_name, amount, note, is_payment)
+        VALUES (%s, %s, %s, %s, %s, %s)
         RETURNING *
-    """, (telegram_id, direction, person_name, amount, note))
+    """, (telegram_id, direction, person_name, amount, note, is_payment))
     row = cur.fetchone()
     conn.commit()
     cur.close()
@@ -793,6 +798,7 @@ def serialize_debt(row):
         "amount": float(row["amount"]),
         "note": row["note"],
         "is_paid": row["is_paid"],
+        "is_payment": bool(row["is_payment"]),
         "created_at": to_utc_iso(row["created_at"]),
         "paid_at": to_utc_iso(row["paid_at"]) if row["paid_at"] else None,
     }
@@ -818,6 +824,7 @@ def api_add_debt():
     person_name = (data.get("person_name") or "").strip()[:100]
     amount = data.get("amount")
     note = (data.get("note") or "").strip()[:200]
+    is_payment = bool(data.get("is_payment", False))
 
     if direction not in ("given", "taken"):
         return jsonify({"error": "noto'g'ri turi"}), 400
@@ -830,7 +837,7 @@ def api_add_debt():
     if amount <= 0:
         return jsonify({"error": "summa 0 dan katta bo'lishi kerak"}), 400
 
-    row = add_debt(user["id"], direction, person_name, amount, note)
+    row = add_debt(user["id"], direction, person_name, amount, note, is_payment)
     return jsonify(serialize_debt(row)), 201
 
 
