@@ -496,6 +496,7 @@
 
         .tx-sum.green { color: var(--green); }
         .tx-sum.red { color: var(--red); }
+        .tx-sum.blue-text { color: var(--blue); }
 
         .tx-actions {
             display: flex;
@@ -646,6 +647,59 @@
         .debt-type-btn.active[data-direction="taken"] {
             background: rgba(255, 71, 87, 0.18);
             color: var(--red);
+        }
+
+        .debt-entry-btn {
+            flex: 1;
+            padding: 9px 6px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text2);
+            font-weight: 600;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .debt-entry-btn.active {
+            background: rgba(91, 106, 240, 0.15);
+            color: var(--blue);
+            border-color: rgba(91, 106, 240, 0.4);
+        }
+
+        .search-input-wrap {
+            position: relative;
+        }
+
+        .search-input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 17px;
+            height: 17px;
+            color: var(--text2);
+            pointer-events: none;
+        }
+
+        .search-input-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .search-input {
+            padding-left: 40px !important;
+        }
+
+        .debt-payment-tag {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--blue);
+            background: rgba(91, 106, 240, 0.15);
+            padding: 2px 7px;
+            border-radius: 6px;
+            margin-left: 6px;
         }
 
         .debt-summary-row {
@@ -1046,7 +1100,7 @@
 
                     <div class="field-group">
                         <label class="field-label">summa (so'm)</label>
-                        <input type="number" class="field-input" id="incomeAmount" placeholder="50000" inputmode="numeric">
+                        <input type="text" class="field-input money-input" id="incomeAmount" placeholder="50 000" inputmode="numeric">
                     </div>
 
                     <button class="submit-btn income-submit" id="incomeSubmitBtn">+ kirimni saqlash</button>
@@ -1063,7 +1117,7 @@
 
                     <div class="field-group">
                         <label class="field-label">summa (so'm)</label>
-                        <input type="number" class="field-input" id="expenseAmount" placeholder="50000" inputmode="numeric">
+                        <input type="text" class="field-input money-input" id="expenseAmount" placeholder="50 000" inputmode="numeric">
                     </div>
 
                     <div class="field-group">
@@ -1126,14 +1180,19 @@
                         <button type="button" class="debt-type-btn" data-direction="taken" id="debtTakenBtn">Men qarzdorman</button>
                     </div>
 
-                    <div class="field-group">
+                    <div class="debt-type-toggle" style="margin-top: 8px;">
+                        <button type="button" class="debt-entry-btn active" data-entry="debt" id="debtEntryDebtBtn">Yangi qarz</button>
+                        <button type="button" class="debt-entry-btn" data-entry="payment" id="debtEntryPaymentBtn">To'lov qildi</button>
+                    </div>
+
+                    <div class="field-group" style="margin-top: 14px;">
                         <label class="field-label">ism</label>
                         <input type="text" class="field-input" id="debtPersonName" placeholder="masalan: Aziz" maxlength="100">
                     </div>
 
                     <div class="field-group">
                         <label class="field-label">summa (so'm)</label>
-                        <input type="number" class="field-input" id="debtAmount" placeholder="100000" inputmode="numeric">
+                        <input type="text" class="field-input money-input" id="debtAmount" placeholder="100 000" inputmode="numeric">
                     </div>
 
                     <div class="field-group">
@@ -1142,6 +1201,13 @@
                     </div>
 
                     <button class="submit-btn" id="debtSubmitBtn" style="background: var(--blue); box-shadow: 0 8px 20px rgba(91, 106, 240, 0.25);">+ qo'shish</button>
+                </div>
+
+                <div class="field-group" style="margin-top: 4px;">
+                    <div class="search-input-wrap">
+                        <span class="search-input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                        <input type="text" class="field-input search-input" id="debtSearchInput" placeholder="ism bo'yicha qidirish...">
+                    </div>
                 </div>
 
                 <div class="section-header" style="margin-top: 4px;">
@@ -1189,7 +1255,7 @@
 
             <div class="field-group">
                 <label class="field-label">summa (so'm)</label>
-                <input type="number" class="field-input" id="editAmount" inputmode="numeric">
+                <input type="text" class="field-input money-input" id="editAmount" inputmode="numeric">
             </div>
 
             <div class="field-group" id="editCategoryGroup">
@@ -1224,7 +1290,7 @@
 
             <div class="field-group">
                 <label class="field-label">summa (so'm)</label>
-                <input type="number" class="field-input" id="debtEditAmount" inputmode="numeric">
+                <input type="text" class="field-input money-input" id="debtEditAmount" inputmode="numeric">
             </div>
 
             <div class="field-group">
@@ -1312,6 +1378,33 @@
 
         function icon(name, extraClass) {
             return `<span class="icon ${extraClass || ''}">${ICONS[name]}</span>`;
+        }
+
+        // Pul kiritish maydonlari uchun: foydalanuvchi yozayotganda avtomatik
+        // har 3 xonadan keyin probel qo'yiladi (masalan "30000" -> "30 000").
+        // parseMoneyInput probellarni olib tashlab, haqiqiy sonni qaytaradi.
+        function parseMoneyInput(value) {
+            const digits = (value || '').toString().replace(/\D/g, '');
+            return digits ? parseFloat(digits) : NaN;
+        }
+
+        function formatMoneyLive(value) {
+            const digits = (value || '').replace(/\D/g, '');
+            if (!digits) return '';
+            return parseInt(digits, 10).toLocaleString('uz-UZ').replace(/,/g, ' ');
+        }
+
+        function attachMoneyFormatting() {
+            document.querySelectorAll('.money-input').forEach(input => {
+                if (input.dataset.moneyBound) return;
+                input.dataset.moneyBound = '1';
+                input.addEventListener('input', () => {
+                    const cursorFromEnd = input.value.length - input.selectionStart;
+                    input.value = formatMoneyLive(input.value);
+                    const pos = Math.max(0, input.value.length - cursorFromEnd);
+                    input.setSelectionRange(pos, pos);
+                });
+            });
         }
 
         function fmt(n) {
@@ -1412,7 +1505,7 @@
 
         // Kirim saqlash
         $('#incomeSubmitBtn').addEventListener('click', async () => {
-            const amount = parseFloat($('#incomeAmount').value);
+            const amount = parseMoneyInput($('#incomeAmount').value);
 
             if (!amount || amount <= 0) {
                 showToast('summani kiriting');
@@ -1443,7 +1536,7 @@
 
         // Xarajat saqlash
         $('#expenseSubmitBtn').addEventListener('click', async () => {
-            const amount = parseFloat($('#expenseAmount').value);
+            const amount = parseMoneyInput($('#expenseAmount').value);
             const category = $('#expenseCategory').value.trim();
             const note = $('#expenseNote').value.trim();
 
@@ -1887,7 +1980,7 @@
         function openEditModal(dataset) {
             editingId = dataset.id;
             editingType = dataset.type;
-            $('#editAmount').value = dataset.amount;
+            $('#editAmount').value = formatMoneyLive(String(dataset.amount));
             $('#editCategory').value = dataset.category || '';
             $('#editNote').value = dataset.note || '';
             $('#editCategoryGroup').style.display = dataset.type === 'expense' ? 'block' : 'none';
@@ -1908,7 +2001,7 @@
         $('#editCancelBtn').addEventListener('click', closeEditModal);
 
         $('#editSaveBtn').addEventListener('click', async () => {
-            const amount = parseFloat($('#editAmount').value);
+            const amount = parseMoneyInput($('#editAmount').value);
             const category = $('#editCategory').value.trim();
             const note = $('#editNote').value.trim();
 
@@ -1958,6 +2051,8 @@
         // ============================================================
         let debts = [];
         let selectedDebtDirection = 'given';
+        let selectedDebtEntry = 'debt'; // 'debt' | 'payment'
+        let debtSearchQuery = '';
 
         async function loadDebts() {
             try {
@@ -1968,9 +2063,10 @@
             renderDebts();
         }
 
-        // Bir xil odamga tegishli bir nechta qarz yozuvini bitta qatorga
-        // birlashtiradi (masalan: Azizga avval 100 ming, keyin яна 50 ming —
-        // endi "Aziz — 150 000" bo'lib, bosilganda ikkalasi alohida ko'rinadi).
+        // Bir xil odamga tegishli bir nechta qarz/to'lov yozuvini bitta
+        // qatorga birlashtiradi (ism katta-kichik harfiga qaramasdan).
+        // Masalan: Oybekka 100 000 qarz, keyin Oybek "30 000 to'lov qildi"
+        // deb yozilsa — sof qarzi avtomatik 70 000 ga tushadi.
         function groupDebtsByPerson(list) {
             const groups = {};
             list.forEach(d => {
@@ -1978,45 +2074,58 @@
                 if (!groups[key]) {
                     groups[key] = {
                         key, direction: d.direction, person_name: d.person_name,
-                        items: [], totalUnpaid: 0, totalPaid: 0, latest: d.created_at,
+                        items: [], totalDebt: 0, totalPaidMarked: 0, totalPayment: 0,
+                        latest: d.created_at,
                     };
                 }
                 const g = groups[key];
                 g.items.push(d);
-                if (d.is_paid) g.totalPaid += d.amount;
-                else g.totalUnpaid += d.amount;
+                if (d.is_payment) {
+                    g.totalPayment += d.amount;
+                } else if (d.is_paid) {
+                    g.totalPaidMarked += d.amount;
+                } else {
+                    g.totalDebt += d.amount;
+                }
                 if (new Date(d.created_at) > new Date(g.latest)) {
                     g.latest = d.created_at;
                     g.person_name = d.person_name; // eng oxirgi yozuvdagi yozilishi
                 }
             });
-            return Object.values(groups).sort((a, b) => new Date(b.latest) - new Date(a.latest));
+
+            return Object.values(groups).map(g => {
+                const net = g.totalDebt - g.totalPayment;
+                g.netBalance = net > 0 ? net : 0;
+                g.isSettled = g.netBalance === 0 && (g.totalDebt > 0 || g.totalPaidMarked > 0);
+                return g;
+            }).sort((a, b) => new Date(b.latest) - new Date(a.latest));
         }
 
         function renderDebtGroupHTML(g, uniqueKey) {
             const cls = g.direction === 'given' ? 'green' : 'red';
             const boxCls = g.direction === 'given' ? 'income-box' : 'expense-box';
-            const allPaid = g.totalUnpaid === 0 && g.totalPaid > 0;
-            const displayAmount = allPaid ? g.totalPaid : g.totalUnpaid;
             const countLabel = g.items.length > 1 ? ` · ${g.items.length} ta yozuv` : '';
-            const paidNote = (!allPaid && g.totalPaid > 0) ? ` · ${fmt(g.totalPaid)} to'landi` : '';
-            const statusLabel = allPaid ? "to'langan" : 'qarzdor';
+            const statusLabel = g.isSettled ? "to'langan" : 'qarzdor';
+            const displayAmount = g.isSettled ? (g.totalDebt || g.totalPaidMarked) : g.netBalance;
 
             const itemsHTML = g.items
                 .slice()
                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                 .map(d => {
                     const dateStr = new Date(d.created_at).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
+                    const sign = d.is_payment ? '−' : '+';
+                    const amountCls = d.is_payment ? 'blue-text' : cls;
+                    const paidBtnHTML = d.is_payment ? '' : `<button class="debt-paid-btn" data-id="${d.id}" data-paid="${d.is_paid ? '0' : '1'}" title="${d.is_paid ? 'qaytadan ochish' : "to'landi deb belgilash"}">${d.is_paid ? icon('undo') : icon('check')}</button>`;
                     return `
                         <div class="tx-item debt-item ${d.is_paid ? 'debt-paid' : ''}">
                             <div class="tx-icon-box ${boxCls}">${icon('person')}</div>
                             <div class="tx-info">
-                                <div class="tx-desc">${dateStr}</div>
+                                <div class="tx-desc">${dateStr}${d.is_payment ? '<span class="debt-payment-tag">to\'lov</span>' : ''}</div>
                                 <div class="tx-date">${d.note ? escapeAttr(d.note) : "izohsiz"}</div>
                             </div>
-                            <div class="tx-sum ${cls}">${fmt(d.amount)}</div>
+                            <div class="tx-sum ${amountCls}">${sign}${fmt(d.amount)}</div>
                             <div class="tx-actions">
-                                <button class="debt-paid-btn" data-id="${d.id}" data-paid="${d.is_paid ? '0' : '1'}" title="${d.is_paid ? 'qaytadan ochish' : "to'landi deb belgilash"}">${d.is_paid ? icon('undo') : icon('check')}</button>
+                                ${paidBtnHTML}
                                 <button class="tx-icon-btn edit-btn debt-edit-btn" data-id="${d.id}" data-person="${escapeAttr(d.person_name)}" data-amount="${d.amount}" data-note="${escapeAttr(d.note)}">${icon('edit')}</button>
                                 <button class="tx-icon-btn delete-btn debt-delete-btn" data-id="${d.id}">${icon('trash')}</button>
                             </div>
@@ -2025,11 +2134,11 @@
                 }).join('');
 
             return `
-                <div class="daily-income-header tx-item ${allPaid ? 'debt-paid' : ''}" data-key="${uniqueKey}">
+                <div class="daily-income-header tx-item ${g.isSettled ? 'debt-paid' : ''}" data-key="${uniqueKey}">
                     <div class="tx-icon-box ${boxCls}">${icon('person')}</div>
                     <div class="tx-info">
                         <div class="tx-desc">${escapeAttr(g.person_name)}</div>
-                        <div class="tx-date">${statusLabel}${countLabel}${paidNote}</div>
+                        <div class="tx-date">${statusLabel}${countLabel}</div>
                     </div>
                     <div class="tx-sum ${cls}">${fmt(displayAmount)}</div>
                     <span class="daily-income-chevron">${icon('chevronDown')}</span>
@@ -2044,25 +2153,28 @@
             const given = debts.filter(d => d.direction === 'given');
             const taken = debts.filter(d => d.direction === 'taken');
 
-            const givenUnpaidTotal = given.filter(d => !d.is_paid).reduce((s, d) => s + d.amount, 0);
-            const takenUnpaidTotal = taken.filter(d => !d.is_paid).reduce((s, d) => s + d.amount, 0);
+            const givenGroups = groupDebtsByPerson(given);
+            const takenGroups = groupDebtsByPerson(taken);
+
+            const givenNetTotal = givenGroups.reduce((s, g) => s + g.netBalance, 0);
+            const takenNetTotal = takenGroups.reduce((s, g) => s + g.netBalance, 0);
 
             // Umumiy balans karta
             const summaryCard = $('#debtSummaryCard');
             if (debts.length === 0) {
                 summaryCard.innerHTML = '<div class="empty-box"><div class="empty-text">hali qarz yo\'q</div></div>';
             } else {
-                const net = givenUnpaidTotal - takenUnpaidTotal;
+                const net = givenNetTotal - takenNetTotal;
                 const netCls = net >= 0 ? 'green' : 'red';
                 summaryCard.innerHTML = `
                     <div class="debt-summary-row">
                         <div class="debt-summary-box">
                             <div class="debt-summary-title">menga qarzdor</div>
-                            <div class="debt-summary-value green">+${fmt(givenUnpaidTotal)}</div>
+                            <div class="debt-summary-value green">+${fmt(givenNetTotal)}</div>
                         </div>
                         <div class="debt-summary-box">
                             <div class="debt-summary-title">men qarzdorman</div>
-                            <div class="debt-summary-value red">−${fmt(takenUnpaidTotal)}</div>
+                            <div class="debt-summary-value red">−${fmt(takenNetTotal)}</div>
                         </div>
                     </div>
                     <div class="total-expense-row">
@@ -2072,21 +2184,29 @@
                 `;
             }
 
-            $('#debtGivenBadge').textContent = fmt(givenUnpaidTotal) + " so'm";
-            $('#debtTakenBadge').textContent = fmt(takenUnpaidTotal) + " so'm";
+            $('#debtGivenBadge').textContent = fmt(givenNetTotal) + " so'm";
+            $('#debtTakenBadge').textContent = fmt(takenNetTotal) + " so'm";
 
-            const givenGroups = groupDebtsByPerson(given);
+            // Qidiruv filtri (katta-kichik harf farqisiz)
+            const q = debtSearchQuery.trim().toLowerCase();
+            const filteredGiven = q ? givenGroups.filter(g => g.person_name.toLowerCase().includes(q)) : givenGroups;
+            const filteredTaken = q ? takenGroups.filter(g => g.person_name.toLowerCase().includes(q)) : takenGroups;
+
             const givenCard = $('#debtGivenCard');
-            givenCard.innerHTML = givenGroups.length === 0
-                ? '<div class="empty-box"><div class="empty-text">hali qarz yo\'q</div></div>'
-                : givenGroups.map((g, i) => renderDebtGroupHTML(g, 'given-' + i)).join('');
+            givenCard.innerHTML = filteredGiven.length === 0
+                ? `<div class="empty-box"><div class="empty-text">${q ? 'hech kim topilmadi' : "hali qarz yo'q"}</div></div>`
+                : filteredGiven.map((g, i) => renderDebtGroupHTML(g, 'given-' + i)).join('');
 
-            const takenGroups = groupDebtsByPerson(taken);
             const takenCard = $('#debtTakenCard');
-            takenCard.innerHTML = takenGroups.length === 0
-                ? '<div class="empty-box"><div class="empty-text">hali qarz yo\'q</div></div>'
-                : takenGroups.map((g, i) => renderDebtGroupHTML(g, 'taken-' + i)).join('');
+            takenCard.innerHTML = filteredTaken.length === 0
+                ? `<div class="empty-box"><div class="empty-text">${q ? 'hech kim topilmadi' : "hali qarz yo'q"}</div></div>`
+                : filteredTaken.map((g, i) => renderDebtGroupHTML(g, 'taken-' + i)).join('');
         }
+
+        $('#debtSearchInput').addEventListener('input', (e) => {
+            debtSearchQuery = e.target.value;
+            renderDebts();
+        });
 
         // Yo'nalish tanlash (Menga qarzdor / Men qarzdorman)
         $('#debtGivenBtn').addEventListener('click', () => {
@@ -2101,10 +2221,25 @@
             $('#debtGivenBtn').classList.remove('active');
         });
 
-        // Yangi qarz qo'shish
+        // Yozuv turi tanlash (Yangi qarz / To'lov qildi)
+        $('#debtEntryDebtBtn').addEventListener('click', () => {
+            selectedDebtEntry = 'debt';
+            $('#debtEntryDebtBtn').classList.add('active');
+            $('#debtEntryPaymentBtn').classList.remove('active');
+            $('#debtSubmitBtn').textContent = "+ qo'shish";
+        });
+
+        $('#debtEntryPaymentBtn').addEventListener('click', () => {
+            selectedDebtEntry = 'payment';
+            $('#debtEntryPaymentBtn').classList.add('active');
+            $('#debtEntryDebtBtn').classList.remove('active');
+            $('#debtSubmitBtn').textContent = "to'lovni saqlash";
+        });
+
+        // Yangi qarz / to'lov qo'shish
         $('#debtSubmitBtn').addEventListener('click', async () => {
             const personName = $('#debtPersonName').value.trim();
-            const amount = parseFloat($('#debtAmount').value);
+            const amount = parseMoneyInput($('#debtAmount').value);
             const note = $('#debtNote').value.trim();
 
             if (!personName) {
@@ -2124,6 +2259,7 @@
                         person_name: personName,
                         amount,
                         note,
+                        is_payment: selectedDebtEntry === 'payment',
                     })
                 });
 
@@ -2131,7 +2267,7 @@
                 $('#debtAmount').value = '';
                 $('#debtNote').value = '';
 
-                showToast("qarz qo'shildi");
+                showToast(selectedDebtEntry === 'payment' ? "to'lov qo'shildi" : "qarz qo'shildi");
                 if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
 
                 await loadDebts();
@@ -2146,7 +2282,7 @@
         function openDebtEditModal(dataset) {
             editingDebtId = dataset.id;
             $('#debtEditPersonName').value = dataset.person || '';
-            $('#debtEditAmount').value = dataset.amount || '';
+            $('#debtEditAmount').value = formatMoneyLive(String(dataset.amount || ''));
             $('#debtEditNote').value = dataset.note || '';
             $('#debtEditModalOverlay').classList.add('show');
         }
@@ -2206,7 +2342,7 @@
 
         $('#debtEditSaveBtn').addEventListener('click', async () => {
             const personName = $('#debtEditPersonName').value.trim();
-            const amount = parseFloat($('#debtEditAmount').value);
+            const amount = parseMoneyInput($('#debtEditAmount').value);
             const note = $('#debtEditNote').value.trim();
 
             if (!personName) {
@@ -2273,6 +2409,7 @@
         });
 
         // Boshlash
+        attachMoneyFormatting();
         checkAccess();
     </script>
 </body>
